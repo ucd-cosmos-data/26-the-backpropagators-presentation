@@ -29,12 +29,12 @@ const splitLabels: Record<CellPrediction["split"], string> = {
 
 function splitNote(cell: CellPrediction) {
   if (cell.split === "test") {
-    return "This cell was in the untouched test set. XGBoost did not see it while learning or during model selection, so this is the fairest kind of example.";
+    return "This cell came from the untouched test group. XGBoost did not use it for learning, tuning, or choosing the winning model, so it is the fairest kind of example.";
   }
   if (cell.split === "validation") {
-    return "This cell was not used to fit XGBoost’s trees, but its split helped compare model families. Treat this as a model-selection example rather than a final test.";
+    return "This cell came from the validation group. It did not teach XGBoost's trees, but it was part of the group used to compare model families, so it is not a final-test example.";
   }
-  return "This cell was in the training set, so XGBoost learned from it. Its confidence may be higher than you would expect for a genuinely new cell.";
+  return "This cell came from the training group, so XGBoost learned from it. Its confidence may be higher than it would be for a genuinely new cell.";
 }
 
 export default function CellPredictor() {
@@ -120,10 +120,11 @@ export default function CellPredictor() {
     <main className="try-page">
       <section className="try-heading">
         <div className="eyebrow"><span /> INTERACTIVE MODEL DEMO · XGBOOST</div>
-        <h1>Ask the model about <em>one cell.</em></h1>
+        <h1>See how the model labels <em>one cell.</em></h1>
         <p>
-          Choose any cell that is already in PBMC3k. The classifier compares its
-          gene expression pattern with what it learned is the identity of various cell types, then predicts its identity.
+          Choose any cell already in PBMC3k. The classifier compares that cell's
+          RNA pattern with patterns learned from reviewed examples, then reports
+          the most likely cell type and its level of confidence.
         </p>
       </section>
 
@@ -196,7 +197,7 @@ export default function CellPredictor() {
             <div><dt>Cell number</dt><dd>{selected.number.toLocaleString()}</dd></div>
             <div><dt>Barcode</dt><dd title={selected.barcode}>{selected.barcode}</dd></div>
             <div><dt>Data split</dt><dd>{splitLabels[selected.split]}</dd></div>
-            <div><dt>Reviewed label</dt><dd title={selected.reviewed}>{selected.reviewed}</dd></div>
+            <div><dt>Human-reviewed label</dt><dd title={selected.reviewed}>{selected.reviewed}</dd></div>
           </dl>
 
           <section className="try-probabilities">
@@ -230,13 +231,13 @@ export default function CellPredictor() {
       <section className="try-explainer">
         <div>
           <span className="try-kicker">What's going on?</span>
-          <h2>XGBoost's process</h2>
+          <h2>How XGBoost reaches an answer</h2>
         </div>
         <div className="try-steps">
           {[
-            ["01", "Find the cell", "Retrieve the chosen cell’s saved gene-expression record."],
-            ["02", "Compare patterns", "Combine many decision trees trained to recognize expression patterns."],
-            ["03", "Show the prediction", "Display the most likely label while keeping other nonzero possibilities visible."],
+            ["01", "Read the cell", "Retrieve the chosen cell's saved list of normalized gene-activity values."],
+            ["02", "Let many small trees vote", "Each decision tree checks a series of gene-pattern questions. XGBoost combines their votes into one probability for every possible cell type."],
+            ["03", "Show the possibilities", "Display the highest-probability label while keeping the other nonzero possibilities visible."],
           ].map(([number, title, text]) => (
             <article key={number}>
               <span>{number}</span>
@@ -246,9 +247,11 @@ export default function CellPredictor() {
           ))}
         </div>
         <p className="try-method-note">
-          This demonstration looks up predictions already calculated by the trained
-          XGBoost pipeline for PBMC3k. It does not accept new sequencing data.
-          Probability is model confidence, not biological certainty.
+          This page looks up predictions already calculated for PBMC3k; it does
+          not process new sequencing files. The model was selected using validation
+          macro-F1 and achieved 90.2% accuracy on 264 untouched test cells.
+          Probability is model confidence, not biological certainty, and all cells
+          came from the same donor.
         </p>
       </section>
     </main>

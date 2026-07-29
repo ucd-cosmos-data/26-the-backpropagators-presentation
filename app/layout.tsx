@@ -3,15 +3,15 @@ import "./styles.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "PBMC3k — Decoding the immune system",
+    default: "PBMC3k — From blood cells to an immune-cell map",
     template: "%s · PBMC3k",
   },
   description:
-    "An interactive, end-to-end exploration of 2,638 peripheral blood mononuclear cells through single-cell RNA sequencing.",
+    "A beginner-friendly walkthrough of how 2,700 single-cell RNA profiles became 2,638 quality-checked cells, nine reviewed immune-cell types, and a tested classifier.",
   openGraph: {
-    title: "PBMC3k — Decoding the immune system",
+    title: "PBMC3k — From blood cells to an immune-cell map",
     description:
-      "From raw gene counts to nine immune-cell populations and predictive models.",
+      "Follow the full analysis from raw RNA counts through quality control, mapping, clustering, annotation, and model evaluation.",
     type: "website",
   },
 };
