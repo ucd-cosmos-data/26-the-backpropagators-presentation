@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cellTypes, collaborators, processSteps, type ProcessKey } from "./data";
+import CellPredictor from "./CellPredictor";
 
-type Route = "home" | "overview" | "process" | "team";
+type Route = "home" | "overview" | "process" | "try" | "team";
 
 const pathFor = (route: Route, step?: ProcessKey) =>
   route === "home" ? "/" : route === "process" && step ? `/process/${step}` : `/${route}`;
@@ -11,6 +12,7 @@ const pathFor = (route: Route, step?: ProcessKey) =>
 function parsePath(pathname: string): { route: Route; step: ProcessKey } {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "overview") return { route: "overview", step: "preprocessing" };
+  if (parts[0] === "try") return { route: "try", step: "preprocessing" };
   if (parts[0] === "team") return { route: "team", step: "preprocessing" };
   if (parts[0] === "process") {
     const requested = parts[1] as ProcessKey;
@@ -131,6 +133,7 @@ function Header({
             ))}
           </div>
         </div>
+        <button className={route === "try" ? "active" : ""} onClick={() => navigate("try")}>Try</button>
         <button className={route === "team" ? "active" : ""} onClick={() => navigate("team")}>Team</button>
       </nav>
     </header>
@@ -543,6 +546,7 @@ export default function Presentation() {
       {location.route === "home" && <Home go={go} />}
       {location.route === "overview" && <Overview go={go} />}
       {location.route === "process" && <ProcessPage activeStep={location.step} go={go} />}
+      {location.route === "try" && <CellPredictor />}
       {location.route === "team" && <Team />}
       <Footer />
     </>
