@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./styles.css";
+import "./one-page.css";
 
 export const metadata: Metadata = {
   title: {
@@ -7,11 +8,11 @@ export const metadata: Metadata = {
     template: "%s · PBMC3k",
   },
   description:
-    "A beginner-friendly walkthrough of how 2,700 single-cell RNA profiles became 2,638 quality-checked cells, nine reviewed immune-cell types, and a tested classifier.",
+    "A seven-slide walkthrough of how 2,700 single-cell RNA profiles became 2,638 quality-checked cells, nine reviewed immune-cell types, and a tested classifier.",
   openGraph: {
     title: "PBMC3k — From blood cells to an immune-cell map",
     description:
-      "Follow the full analysis from raw RNA counts through quality control, mapping, clustering, annotation, and model evaluation.",
+      "Scroll through the full analysis from raw RNA counts to quality control, mapping, clustering, annotation, model evaluation, and an interactive prediction.",
     type: "website",
   },
 };

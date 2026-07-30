@@ -1,5 +1,5 @@
-import Presentation from "@/components/Presentation";
+import SinglePagePresentation from "@/components/SinglePagePresentation";
 
 export default function HomePage() {
-  return <Presentation />;
+  return <SinglePagePresentation />;
 }

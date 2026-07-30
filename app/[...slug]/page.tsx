@@ -1,5 +1,5 @@
-import Presentation from "@/components/Presentation";
+import { redirect } from "next/navigation";
 
 export default function PresentationPage() {
-  return <Presentation />;
+  redirect("/");
 }
