@@ -409,11 +409,31 @@ function Overview({ go }: { go: (route: Route, step?: ProcessKey) => void }) {
 
 function ConceptVisual({ index }: { index: number }) {
   if (index === 0) {
+    const cellGroups = [
+      { short: "T", name: "T cells", role: "Coordinate and carry out adaptive immune responses", color: "#75855a" },
+      { short: "B", name: "B cells", role: "Produce antibodies and remember past infections", color: "#5f7eb8" },
+      { short: "NK", name: "NK cells", role: "Destroy infected or abnormal cells", color: "#a27a52" },
+      { short: "M", name: "Monocytes", role: "Sense danger and engulf foreign material", color: "#d66b4d" },
+    ];
     return (
-      <div className="concept-visual blood">
-        {["T", "B", "NK", "M", "T", "T", "M", "B", "T", "NK", "T", "M"].map((label, i) => (
-          <span key={i} style={{ "--i": i } as React.CSSProperties}>{label}</span>
-        ))}
+      <div className="concept-visual pbmc-diagram" role="img" aria-label="Four major PBMC families and their immune roles">
+        <div className="blood-tube" aria-hidden="true">
+          <span className="tube-cap" />
+          <div className="tube-fluid">
+            {["T", "B", "T", "M", "NK", "T", "M", "B", "T", "NK", "T", "M"].map((label, i) => (
+              <i key={i} data-label={label} />
+            ))}
+          </div>
+          <small>PBMC sample</small>
+        </div>
+        <div className="pbmc-legend">
+          {cellGroups.map((group) => (
+            <div key={group.short}>
+              <i style={{ background: group.color }}>{group.short}</i>
+              <p><strong>{group.name}</strong><span>{group.role}</span></p>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -426,75 +446,190 @@ function ConceptVisual({ index }: { index: number }) {
       </div>
     );
   }
+  const markerRows = [
+    { type: "T cell", genes: ["CD3D", "IL7R"], color: "#75855a" },
+    { type: "B cell", genes: ["MS4A1", "CD79A"], color: "#5f7eb8" },
+    { type: "NK cell", genes: ["NKG7", "GNLY"], color: "#a27a52" },
+    { type: "Monocyte", genes: ["LYZ", "LST1"], color: "#d66b4d" },
+  ];
   return (
-    <div className="concept-visual markers">
-      {["CD3D", "NKG7", "MS4A1", "LST1", "IL7R", "GNLY"].map((gene, i) => (
-        <span key={gene} style={{ "--i": i } as React.CSSProperties}>{gene}</span>
+    <div className="concept-visual marker-program" role="img" aria-label="Marker-gene combinations used to distinguish four immune cell families">
+      <div className="marker-program-heading">
+        <span>CELL IDENTITY</span><span>COORDINATED MARKER PROGRAM</span>
+      </div>
+      {markerRows.map((row) => (
+        <div className="marker-program-row" key={row.type}>
+          <strong><i style={{ background: row.color }} />{row.type}</strong>
+          <div>{row.genes.map((gene) => <span key={gene}>{gene}</span>)}</div>
+        </div>
       ))}
+      <p><b>Why combinations?</b> One gene can appear in several populations. Two lineage-consistent markers provide stronger evidence.</p>
     </div>
   );
 }
 
-function ProcessVisual({ step }: { step: ProcessKey }) {
-  if (step === "further-work") return (
-    <div className="process-viz roadmap-viz">
-      <div className="viz-header"><span>RESEARCH ROADMAP</span><span>next</span></div>
-      {[
-        ["01", "External cohorts", "Test whether labels transfer across donors."],
-        ["02", "Batch correction", "Separate biological signal from protocol effects."],
-        ["03", "Rare-cell resolution", "Collect more examples of platelets and dendritic cells."],
-        ["04", "Independent labels", "Validate against expert or multimodal ground truth."],
-      ].map(([n, title, text]) => (
-        <div className="roadmap-row" key={n}><b>{n}</b><div><h3>{title}</h3><p>{text}</p></div><span>↗</span></div>
-      ))}
-    </div>
-  );
+type ProcessFigure = { src: string; alt: string; label: string; caption: string };
 
-  const figures: Record<
-    Exclude<ProcessKey, "further-work">,
-    { src: string; alt: string; label: string; caption: string }
-  > = {
-    preprocessing: {
+const processFigures: Record<ProcessKey, ProcessFigure[]> = {
+  preprocessing: [
+    {
       src: "/figures/qc-retained-cell-distributions.png",
       alt: "Three histograms showing RNA counts, detected genes, and mitochondrial RNA among the 2,638 cells retained after quality control",
-      label: "FIG. 01 · QUALITY CONTROL",
+      label: "QC distributions",
       caption: "QC retained 97.7% of starting profiles. Red dashed lines mark the gene-count and mitochondrial-RNA thresholds.",
     },
-    eda: {
+    {
+      src: "/figures/eda-pca-umap.png",
+      alt: "PCA variance curve and UMAP produced after preprocessing",
+      label: "Prepared data",
+      caption: "After normalization and variable-gene selection, PCA and the neighbor graph reveal usable biological structure.",
+    },
+  ],
+  eda: [
+    {
       src: "/figures/eda-pca-umap.png",
       alt: "PCA variance curve beside a UMAP of the 15-nearest-neighbor graph colored into nine Leiden communities",
-      label: "FIG. 02 · DIMENSION REDUCTION",
+      label: "PCA + UMAP",
       caption: "PCA compresses expression before UMAP draws the 15-neighbor graph. The first 10 PCs were used for downstream structure.",
     },
-    clustering: {
+    {
+      src: "/figures/umap-tsne-comparison.png",
+      alt: "UMAP and t-SNE views of the same cells and labels",
+      label: "UMAP vs t-SNE",
+      caption: "Two nonlinear embeddings recover similar neighborhoods, reducing the chance that one drawing method invented the pattern.",
+    },
+    {
+      src: "/figures/leiden-clusters.png",
+      alt: "UMAP showing nine Leiden communities",
+      label: "Neighbor structure",
+      caption: "The map makes the graph’s local neighborhoods visible before biological labels are assigned.",
+    },
+  ],
+  clustering: [
+    {
       src: "/figures/clustering-kmeans-leiden-comparison.png",
       alt: "Side-by-side UMAP comparison of K-means with two groups and Leiden with nine communities",
-      label: "FIG. 03 · CLUSTERING CROSS-CHECK",
+      label: "K-means vs Leiden",
       caption: "The same UMAP receives two label sets. K-means shows broad geometry; Leiden follows finer communities in the neighbor graph.",
     },
-    annotation: {
+    {
+      src: "/figures/kmeans-k2-k10-diagnostics.png",
+      alt: "K-means elbow, silhouette, stability, and cluster-size diagnostics from K equals 2 through 10",
+      label: "K=2–10 tests",
+      caption: "K=2 has the strongest silhouette score, while the elbow is nearer K=4. The curves answer different questions.",
+    },
+    {
+      src: "/figures/leiden-resolution-diagnostics.png",
+      alt: "Diagnostics for Leiden resolutions 0.3 through 0.8",
+      label: "Leiden resolution",
+      caption: "Resolution 0.5 balances nine communities, stability, separation, and technical-quality association.",
+    },
+    {
+      src: "/figures/alternative-clustering-methods.png",
+      alt: "UMAP comparison of K-means, agglomerative, Gaussian mixture, and Leiden clustering",
+      label: "Alternative methods",
+      caption: "Agglomerative and Gaussian-mixture results provide sensitivity checks; neither supplied the final annotations.",
+    },
+  ],
+  annotation: [
+    {
       src: "/figures/annotation-marker-dotplot.png",
       alt: "Dot plot of known immune marker genes across nine reviewed cell types",
-      label: "FIG. 04 · MARKER EVIDENCE",
+      label: "Marker dot plot",
       caption: "Dot size is the percentage of cells expressing a gene; color is mean expression. Labels rely on coordinated marker programs.",
     },
-    model: {
+    {
+      src: "/figures/leiden-clusters.png",
+      alt: "Nine numbered Leiden clusters before biological naming",
+      label: "Numbered clusters",
+      caption: "Clustering creates numbered communities. Marker evidence and review turn those numbers into biological identities.",
+    },
+    {
+      src: "/figures/classification-class-balance.png",
+      alt: "Cell counts for the nine reviewed immune-cell identities",
+      label: "Cell-type sizes",
+      caption: "The final labels range from 602 memory/helper T cells to only 11 platelets, so rare labels need extra caution.",
+    },
+  ],
+  model: [
+    {
       src: "/figures/classification-model-comparison.png",
       alt: "Grouped bar chart comparing validation and test macro-F1 and ROC AUC across nine classifiers",
-      label: "FIG. 05 · MODEL COMPARISON",
+      label: "Model comparison",
       caption: "XGBoost ranks first by the prespecified validation macro-F1. Test metrics are shown only as final estimates.",
     },
-  };
-  const figure = figures[step];
+    {
+      src: "/figures/classification-confusion-matrix.png",
+      alt: "Normalized confusion matrix for XGBoost on the untouched test set",
+      label: "Confusion matrix",
+      caption: "The diagonal shows correct calls; off-diagonal cells expose which immune populations the model confuses.",
+    },
+    {
+      src: "/figures/classification-class-balance.png",
+      alt: "Class sizes across nine reviewed cell types",
+      label: "Class balance",
+      caption: "Unequal class sizes make accuracy alone misleading, which is why model selection used macro-F1.",
+    },
+    {
+      src: "/figures/classification-top-selected-genes.png",
+      alt: "Top 25 training-only genes ranked by ANOVA feature score",
+      label: "Selected genes",
+      caption: "Feature selection was fit only on training cells, preventing validation and test information from leaking into the model.",
+    },
+  ],
+  "further-work": [
+    {
+      src: "/figures/classification-class-balance.png",
+      alt: "Cell-type sizes showing large imbalance and very rare populations",
+      label: "Rare-class uncertainty",
+      caption: "The 11-cell platelet population shows why more rare-cell examples are necessary before broad deployment.",
+    },
+    {
+      src: "/figures/classification-confusion-matrix.png",
+      alt: "XGBoost test confusion matrix showing errors among related cell states",
+      label: "Remaining errors",
+      caption: "Confusion among related T-cell states motivates independent labels and larger validation cohorts.",
+    },
+    {
+      src: "/figures/classification-model-comparison.png",
+      alt: "Validation and test metrics for nine model families",
+      label: "Validation gap",
+      caption: "Performance within one donor is encouraging, but external donors are required to measure real transfer.",
+    },
+  ],
+};
 
+function ProcessGraphGallery({
+  step,
+  active,
+  onSelect,
+}: {
+  step: ProcessKey;
+  active: number;
+  onSelect: (index: number) => void;
+}) {
+  const figures = processFigures[step];
+  const figure = figures[active] ?? figures[0];
   return (
-    <figure className="process-viz data-figure">
-      <img src={figure.src} alt={figure.alt} />
-      <figcaption>
-        <span>{figure.label}</span>
-        {figure.caption}
-      </figcaption>
-    </figure>
+    <div className="deck-graphs">
+      <div className="deck-graph-tabs" role="tablist" aria-label={`${step} graphs`}>
+        {figures.map((item, index) => (
+          <button
+            role="tab"
+            aria-selected={index === active}
+            className={index === active ? "active" : ""}
+            onClick={() => onSelect(index)}
+            key={item.label}
+          >
+            <span>0{index + 1}</span>{item.label}
+          </button>
+        ))}
+      </div>
+      <figure className="deck-figure">
+        <img src={figure.src} alt={figure.alt} />
+        <figcaption><strong>{figure.label}</strong>{figure.caption}</figcaption>
+      </figure>
+    </div>
   );
 }
 
@@ -510,20 +645,35 @@ function ProcessPage({
   const previous = processSteps[index - 1];
   const next = processSteps[index + 1];
   const [guideSlide, setGuideSlide] = useState(0);
+  const [graphIndex, setGraphIndex] = useState(0);
+  const detail = step.guide[guideSlide];
 
-  useEffect(() => setGuideSlide(0), [activeStep]);
+  useEffect(() => {
+    setGuideSlide(0);
+    setGraphIndex(0);
+  }, [activeStep]);
+
+  useEffect(() => {
+    setGraphIndex(guideSlide % processFigures[activeStep].length);
+  }, [guideSlide, activeStep]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft" && previous) go("process", previous.key);
-      if (event.key === "ArrowRight" && next) go("process", next.key);
+      if (event.key === "ArrowLeft") {
+        if (guideSlide > 0) setGuideSlide((current) => current - 1);
+        else if (previous) go("process", previous.key);
+      }
+      if (event.key === "ArrowRight") {
+        if (guideSlide < step.guide.length - 1) setGuideSlide((current) => current + 1);
+        else if (next) go("process", next.key);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, previous, next]);
+  }, [go, previous, next, guideSlide, step.guide.length]);
 
   return (
-    <main className="process-page">
+    <main className="process-deck">
       <aside className="step-rail" aria-label="Analysis steps">
         <p>PROCESS</p>
         {processSteps.map((item, itemIndex) => (
@@ -538,56 +688,45 @@ function ProcessPage({
           </button>
         ))}
       </aside>
-      <section className="step-content" key={step.key}>
-        <div className="step-copy">
-          <div className="eyebrow"><span /> STEP {step.number} · {step.eyebrow}</div>
-          <h1>{step.title}</h1>
-          <p className="lede">{step.description}</p>
-          <div className="method-notes">
-            {step.notes.map((note) => <div key={note.label}><span>{note.label}</span><strong>{note.value}</strong></div>)}
-          </div>
-          <p className="interaction-hint"><kbd>←</kbd><kbd>→</kbd> Use arrow keys to move through the workflow</p>
-        </div>
-        <ProcessVisual step={step.key} />
-      </section>
-      <section className="step-guide" aria-labelledby={`${step.key}-guide-title`}>
-        <div className="step-guide-heading">
-          <span>METHOD SLIDES</span>
-          <h2 id={`${step.key}-guide-title`}>One decision and one visual at a time.</h2>
-        </div>
-        <div className="method-slides">
-          {step.guide.map((item, guideIndex) => (
-            <article
-              className={guideIndex === guideSlide ? "method-slide active" : "method-slide"}
-              key={item.label}
-              aria-hidden={guideIndex !== guideSlide}
-            >
-              <div className="method-slide-copy">
-                <span>SLIDE {guideIndex + 1} / {step.guide.length} · {item.label}</span>
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </div>
-              <div className="method-slide-visual">
-                {item.visual ? (
-                <figure>
-                  <img src={item.visual.src} alt={item.visual.alt} />
-                  <figcaption>{item.visual.caption}</figcaption>
-                </figure>
-                ) : (
-                  <ProcessVisual step={step.key} />
-                )}
-              </div>
-            </article>
-          ))}
-          <div className="method-slide-controls">
-            <button
-              onClick={() => setGuideSlide((current) => Math.max(0, current - 1))}
-              disabled={guideSlide === 0}
-              aria-label="Previous method slide"
-            >
-              <Arrow left /> Previous
-            </button>
+      <div className="deck-column" key={step.key}>
+        <section className="deck-shell">
+          <header className="deck-header">
             <div>
+              <div className="eyebrow"><span /> STEP {step.number} · {step.eyebrow}</div>
+              <h1>{step.title}</h1>
+            </div>
+            <div className="deck-notes">
+              {step.notes.map((note) => (
+                <div key={note.label}><span>{note.label}</span><strong>{note.value}</strong></div>
+              ))}
+            </div>
+          </header>
+
+          <div className="deck-body">
+            <article className="deck-copy">
+              <span>SLIDE {guideSlide + 1} / {step.guide.length} · {detail.label}</span>
+              <h2>{detail.title}</h2>
+              <p>{detail.text}</p>
+            </article>
+            <ProcessGraphGallery step={step.key} active={graphIndex} onSelect={setGraphIndex} />
+          </div>
+        </section>
+
+        <nav className="deck-navigation" aria-label="Method slide navigation">
+          <div className="deck-navigation-label">
+            <span>CONTINUE THROUGH {step.short.toUpperCase()}</span>
+            <small>Slide {guideSlide + 1} of {step.guide.length} · choose a bar or use the large buttons</small>
+          </div>
+          <div className="deck-controls">
+            <button
+              className="deck-previous"
+              onClick={() => guideSlide > 0 ? setGuideSlide(guideSlide - 1) : previous && go("process", previous.key)}
+              disabled={guideSlide === 0 && !previous}
+            >
+              <Arrow left />
+              <span><small>BACK</small>{guideSlide > 0 ? step.guide[guideSlide - 1].label : previous?.short ?? "Start"}</span>
+            </button>
+            <div className="deck-progress">
               {step.guide.map((item, itemIndex) => (
                 <button
                   key={item.label}
@@ -598,24 +737,18 @@ function ProcessPage({
               ))}
             </div>
             <button
-              onClick={() => setGuideSlide((current) => Math.min(step.guide.length - 1, current + 1))}
-              disabled={guideSlide === step.guide.length - 1}
+              className="deck-next"
+              onClick={() => guideSlide < step.guide.length - 1 ? setGuideSlide(guideSlide + 1) : next && go("process", next.key)}
+              disabled={guideSlide === step.guide.length - 1 && !next}
             >
-              Next <Arrow />
+              <span>
+                <small>{guideSlide < step.guide.length - 1 ? "NEXT SLIDE" : "NEXT PROCESS"}</small>
+                {guideSlide < step.guide.length - 1 ? step.guide[guideSlide + 1].label : next?.short ?? "Complete"}
+              </span>
+              <Arrow />
             </button>
           </div>
-        </div>
-      </section>
-      <div className="step-pager">
-        {previous ? (
-          <button onClick={() => go("process", previous.key)}><Arrow left /><span>PREVIOUS<small>{previous.short}</small></span></button>
-        ) : <span />}
-        <p><b>{index + 1}</b> / {processSteps.length}</p>
-        {next ? (
-          <button onClick={() => go("process", next.key)}><span>NEXT<small>{next.short}</small></span><Arrow /></button>
-        ) : (
-          <button onClick={() => go("team")}><span>MEET<small>The team</small></span><Arrow /></button>
-        )}
+        </nav>
       </div>
     </main>
   );
@@ -700,7 +833,7 @@ export default function Presentation() {
       {location.route === "process" && <ProcessPage activeStep={location.step} go={go} />}
       {location.route === "try" && <CellPredictor />}
       {location.route === "team" && <Team />}
-      <Footer />
+      {location.route !== "process" && <Footer />}
       <Tutorial open={tutorialOpen} onClose={closeTutorial} go={go} />
     </>
   );
