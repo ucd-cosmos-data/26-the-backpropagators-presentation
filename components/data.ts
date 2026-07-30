@@ -285,15 +285,15 @@ export const processSteps: {
 ];
 
 export const cellTypes = [
-  { name: "IL7R+ memory/helper T", count: 602, color: "#6e7e4f", markers: "CD3D · IL7R · LTB" },
-  { name: "Classical monocytes", count: 502, color: "#d66b4d", markers: "LYZ · S100A8 · FCN1" },
-  { name: "Naive/resting T", count: 450, color: "#91a96b", markers: "CCR7 · IL7R · CD3E" },
-  { name: "B cells", count: 348, color: "#5f7eb8", markers: "MS4A1 · CD79A · CD74" },
-  { name: "Cytotoxic CD8 T", count: 273, color: "#b48bc5", markers: "CD8A · CCL5 · GZMK" },
-  { name: "CD16+ monocytes", count: 171, color: "#8069b1", markers: "FCGR3A · LST1 · CFD" },
-  { name: "NK cells", count: 153, color: "#a27a52", markers: "GNLY · NKG7 · PRF1" },
-  { name: "Activated T", count: 128, color: "#d78eb7", markers: "CCL5 · GZMK · IL32" },
-  { name: "Platelets", count: 11, color: "#d1ae49", markers: "PPBP · PF4 · GNG11" },
+  { name: "IL7R+ memory/helper T", count: 602, color: "#55a9d3", markers: "CD3D · IL7R · LTB" },
+  { name: "Classical monocytes", count: 502, color: "#d45f52", markers: "LYZ · S100A8 · FCN1" },
+  { name: "Naive/resting T", count: 450, color: "#81c6dc", markers: "CCR7 · IL7R · CD3E" },
+  { name: "B cells", count: 348, color: "#2f8fc3", markers: "MS4A1 · CD79A · CD74" },
+  { name: "Cytotoxic CD8 T", count: 273, color: "#4e70b5", markers: "CD8A · CCL5 · GZMK" },
+  { name: "CD16+ monocytes", count: 171, color: "#d98555", markers: "FCGR3A · LST1 · CFD" },
+  { name: "NK cells", count: 153, color: "#239c98", markers: "GNLY · NKG7 · PRF1" },
+  { name: "Activated T", count: 128, color: "#8a6fb7", markers: "CCL5 · GZMK · IL32" },
+  { name: "Platelets", count: 11, color: "#d7aa3e", markers: "PPBP · PF4 · GNG11" },
 ];
 
 export const collaborators = [
