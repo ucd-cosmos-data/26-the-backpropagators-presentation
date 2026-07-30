@@ -264,19 +264,21 @@ function FigureViewer({ figures }: { figures: Figure[] }) {
 }
 
 function MethodSlide({ slide }: { slide: StudySlide }) {
+  const summaryLines = slide.summary.split(/(?<=[.!?])\s+/);
   return (
     <div className="study-card">
       <header className="study-card-header">
-        <div><span className="slide-eyebrow">SLIDE {slide.number} · {slide.eyebrow}</span><h1>{slide.title}</h1></div>
-        <div className="slide-notes">
-          {slide.notes.map((note) => <div key={note.label}><span>{note.label}</span><strong>{note.value}</strong></div>)}
-        </div>
+        <h1>{slide.title}</h1>
       </header>
       <div className="study-card-body">
         <div className="slide-copy">
-          <p className="slide-summary">{slide.summary}</p>
-          <div className="slide-points">
-            {slide.points.map((point) => <article key={point.term}><strong>{point.term}</strong><p>{point.explanation}</p></article>)}
+          <div className="slide-summary" aria-label={slide.summary}>
+            {summaryLines.map((line, index) => (
+              <p key={line}>
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                {line}
+              </p>
+            ))}
           </div>
         </div>
         <FigureViewer figures={slide.figures} />
@@ -343,12 +345,7 @@ function ModelTester() {
   return (
     <div className="study-card test-card">
       <header className="study-card-header">
-        <div><span className="slide-eyebrow">SLIDE 07 · TEST THE MODEL</span><h1>Choose a real PBMC3k cell and inspect XGBoost’s prediction.</h1></div>
-        <div className="slide-notes">
-          <div><span>Available cells</span><strong>2,638</strong></div>
-          <div><span>Test accuracy</span><strong>90.2%</strong></div>
-          <div><span>Test macro-F1</span><strong>0.893</strong></div>
-        </div>
+        <h1>Choose a real PBMC3k cell and inspect XGBoost’s prediction.</h1>
       </header>
       <div className="model-test-body">
         <form onSubmit={submit}>
@@ -394,26 +391,358 @@ function ScrollTutorial({ open, onClose }: { open: boolean; onClose: () => void 
       <section className="scroll-tutorial" role="dialog" aria-modal="true" aria-labelledby="scroll-tutorial-title">
         <button onClick={onClose} aria-label="Close tutorial">×</button>
         <span>HOW TO EXPLORE</span>
-        <div className="scroll-gesture" aria-hidden="true"><i /><b>→</b></div>
-        <h2 id="scroll-tutorial-title">Begin with our question, then move left to right.</h2>
-        <p>Scroll, swipe, or use the arrow buttons to explore seven study slides—from the dataset and our process to a final interactive model test.</p>
+        <div className="scroll-gesture" aria-hidden="true"><i>←</i><b>→</b></div>
+        <h2 id="scroll-tutorial-title">Use the arrows to move through the study.</h2>
+        <p>Use the bottom-right arrow buttons or your keyboard’s left and right arrow keys. Scrolling will not change slides.</p>
         <button className="start-scroll" onClick={onClose}>Start at the question <span>→</span></button>
       </section>
     </div>
   );
 }
 
+function DnaEntranceCanvas({ unwinding, onComplete }: { unwinding: boolean; onComplete: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const phaseRef = useRef(0);
+  const completionRef = useRef(onComplete);
+
+  useEffect(() => { completionRef.current = onComplete; }, [onComplete]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = reducedMotion ? 520 : 1850;
+    const particles = Array.from({ length: 42 }, (_, index) => ({
+      x: (Math.sin(index * 91.7) + 1) / 2,
+      y: (Math.sin(index * 47.3 + 1.8) + 1) / 2,
+      radius: 1.5 + ((index * 13) % 8) / 3,
+      alpha: .12 + ((index * 7) % 9) / 28,
+    }));
+    let animationFrame = 0;
+    let startTime: number | null = null;
+    let previousTime = performance.now();
+    let finished = false;
+    let width = 0;
+    let height = 0;
+
+    const clamp = (value: number) => Math.max(0, Math.min(1, value));
+    const smooth = (value: number) => {
+      const bounded = clamp(value);
+      return bounded * bounded * (3 - 2 * bounded);
+    };
+    const resize = () => {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const drawFrame = (time: number) => {
+      if (unwinding && startTime === null) startTime = time;
+      const progress = startTime === null ? 0 : clamp((time - startTime) / duration);
+      const delta = Math.min(32, time - previousTime);
+      previousTime = time;
+      phaseRef.current += delta * .00062 * (1 - progress * .72);
+
+      context.clearRect(0, 0, width, height);
+      const backgroundAlpha = 1 - smooth((progress - .04) / .83);
+      context.save();
+      context.globalAlpha = backgroundAlpha;
+      const aura = context.createRadialGradient(width * .5, height * .48, 0, width * .5, height * .48, Math.max(width, height) * .52);
+      aura.addColorStop(0, "rgba(255,255,255,.36)");
+      aura.addColorStop(.42, "rgba(203,233,247,.14)");
+      aura.addColorStop(1, "rgba(83,151,198,0)");
+      context.fillStyle = aura;
+      context.fillRect(0, 0, width, height);
+      particles.forEach((particle, index) => {
+        const drift = Math.sin(time * .00035 + index) * 5;
+        context.beginPath();
+        context.arc(particle.x * width + drift, particle.y * height, particle.radius, 0, Math.PI * 2);
+        context.fillStyle = index % 4 === 0
+          ? `rgba(255,255,255,${particle.alpha})`
+          : `rgba(78,158,207,${particle.alpha})`;
+        context.fill();
+      });
+      context.restore();
+
+      const helixHeight = Math.min(height * .86, 820);
+      const top = (height - helixHeight) / 2;
+      const center = width / 2;
+      const amplitude = Math.min(width * .14, 136);
+      const turns = 6;
+      const edgePadding = Math.max(2, width * .004);
+      const sectionProgress = (u: number) => smooth((progress - u * .55) / .45);
+      const point = (u: number, strand: number) => {
+        const local = sectionProgress(u);
+        const angle = u * turns * Math.PI * 2 + phaseRef.current + strand * Math.PI;
+        const helixX = center + Math.sin(angle) * amplitude;
+        const edgeX = strand === 0 ? edgePadding : width - edgePadding;
+        return {
+          x: helixX + (edgeX - helixX) * local,
+          y: top + u * helixHeight,
+          depth: (Math.cos(angle) + 1) / 2,
+          local,
+        };
+      };
+      const strandAlpha = 1 - smooth((progress - .9) / .1);
+      const basePairs = [
+        { leftColor: "rgba(22,143,208,.74)", rightColor: "rgba(129,222,238,.66)", leftGlow: "rgba(91,205,240,.9)", rightGlow: "rgba(215,248,255,.96)" },
+        { leftColor: "rgba(84,199,232,.7)", rightColor: "rgba(240,221,186,.64)", leftGlow: "rgba(181,241,251,.94)", rightGlow: "rgba(255,248,233,.96)" },
+        { leftColor: "rgba(47,115,186,.72)", rightColor: "rgba(156,229,239,.66)", leftGlow: "rgba(114,188,232,.92)", rightGlow: "rgba(227,251,255,.96)" },
+        { leftColor: "rgba(105,214,231,.7)", rightColor: "rgba(77,150,209,.72)", leftGlow: "rgba(214,249,255,.96)", rightGlow: "rgba(158,216,242,.92)" },
+      ];
+
+      context.save();
+      context.globalAlpha = strandAlpha;
+      for (let index = 0; index < 30; index += 1) {
+        const u = (index + .5) / 30;
+        const left = point(u, 0);
+        const right = point(u, 1);
+        const pair = basePairs[index % basePairs.length];
+        const pairAlpha = Math.pow(1 - Math.max(left.local, right.local), 1.45) * .72;
+        if (pairAlpha <= .01) continue;
+        const dx = right.x - left.x;
+        const dy = right.y - left.y;
+        const distance = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        const unitX = dx / Math.max(distance, 1);
+        const unitY = dy / Math.max(distance, 1);
+        const innerGap = Math.min(16, distance * .1);
+        const baseLength = Math.max(7, (distance - innerGap) / 2);
+        const baseHeight = Math.max(8, Math.min(13, helixHeight / 58));
+        context.globalAlpha = strandAlpha * pairAlpha;
+
+        const rungGradient = context.createLinearGradient(left.x, left.y, right.x, right.y);
+        rungGradient.addColorStop(0, "rgba(72,172,220,.72)");
+        rungGradient.addColorStop(.45, "rgba(231,249,255,.92)");
+        rungGradient.addColorStop(.55, "rgba(255,251,238,.94)");
+        rungGradient.addColorStop(1, "rgba(82,183,220,.7)");
+        context.strokeStyle = rungGradient;
+        context.lineWidth = 9;
+        context.lineCap = "round";
+        context.shadowColor = "rgba(70,181,226,.58)";
+        context.shadowBlur = 15;
+        context.beginPath();
+        context.moveTo(left.x, left.y);
+        context.lineTo(right.x, right.y);
+        context.stroke();
+        context.shadowBlur = 0;
+
+        context.globalAlpha = strandAlpha * pairAlpha * .72;
+        context.strokeStyle = "rgba(255,255,255,.96)";
+        context.lineWidth = 1.35;
+        context.beginPath();
+        context.moveTo(left.x - unitY * 2.2, left.y + unitX * 2.2);
+        context.lineTo(right.x - unitY * 2.2, right.y + unitX * 2.2);
+        context.stroke();
+        context.globalAlpha = strandAlpha * pairAlpha;
+
+        const drawBase = (
+          startX: number,
+          startY: number,
+          color: string,
+          glowColor: string,
+          reverse: boolean,
+        ) => {
+          context.save();
+          context.translate(startX, startY);
+          context.rotate(angle);
+          const x = reverse ? -baseLength : 0;
+          const baseGradient = context.createLinearGradient(x, -baseHeight / 2, x + baseLength, baseHeight / 2);
+          baseGradient.addColorStop(0, color);
+          baseGradient.addColorStop(.3, glowColor);
+          baseGradient.addColorStop(.68, color);
+          baseGradient.addColorStop(1, "rgba(244,252,255,.88)");
+          context.fillStyle = baseGradient;
+          context.shadowColor = glowColor;
+          context.shadowBlur = 10;
+          context.beginPath();
+          context.roundRect(x, -baseHeight / 2, baseLength, baseHeight, baseHeight / 2);
+          context.fill();
+          context.shadowBlur = 0;
+          context.strokeStyle = "rgba(255,255,255,.78)";
+          context.lineWidth = 1.15;
+          context.stroke();
+          context.strokeStyle = "rgba(255,255,255,.62)";
+          context.lineWidth = .9;
+          context.beginPath();
+          context.moveTo(x + 3, -baseHeight * .2);
+          context.lineTo(x + baseLength - 3, -baseHeight * .2);
+          context.stroke();
+          context.restore();
+        };
+
+        const midpointX = left.x + dx * .5;
+        const midpointY = left.y + dy * .5;
+        drawBase(left.x, left.y, pair.leftColor, pair.leftGlow, false);
+        drawBase(right.x, right.y, pair.rightColor, pair.rightGlow, true);
+
+        const bondCount = index % 2 === 0 ? 2 : 3;
+        context.fillStyle = "rgba(255,255,255,.96)";
+        context.shadowColor = index % 4 === 1 ? "rgba(255,235,196,.9)" : "rgba(111,214,242,.9)";
+        context.shadowBlur = 7;
+        for (let bond = 0; bond < bondCount; bond += 1) {
+          const offset = (bond - (bondCount - 1) / 2) * 4.1;
+          context.beginPath();
+          context.arc(midpointX + unitX * offset, midpointY + unitY * offset, 1.15, 0, Math.PI * 2);
+          context.fill();
+        }
+        context.shadowBlur = 0;
+        [left, right].forEach((node, nodeIndex) => {
+          const radius = 2.8 + node.depth * 2.1;
+          const nodeGradient = context.createRadialGradient(
+            node.x - radius * .35,
+            node.y - radius * .4,
+            .2,
+            node.x,
+            node.y,
+            radius,
+          );
+          nodeGradient.addColorStop(0, "rgba(255,255,255,.98)");
+          nodeGradient.addColorStop(.34, nodeIndex === 0 ? "rgba(115,225,242,.96)" : "rgba(179,231,250,.96)");
+          nodeGradient.addColorStop(1, nodeIndex === 0 ? "rgba(24,131,194,.9)" : "rgba(52,119,185,.88)");
+          context.beginPath();
+          context.arc(node.x, node.y, radius, 0, Math.PI * 2);
+          context.fillStyle = nodeGradient;
+          context.shadowColor = "rgba(89,196,230,.75)";
+          context.shadowBlur = 10;
+          context.fill();
+          context.shadowBlur = 0;
+        });
+      }
+
+      [0, 1].forEach((strand) => {
+        const gradient = context.createLinearGradient(center - amplitude, top, center + amplitude, top + helixHeight);
+        if (strand === 0) {
+          gradient.addColorStop(0, "rgba(225,250,255,.88)");
+          gradient.addColorStop(.18, "rgba(92,210,235,.74)");
+          gradient.addColorStop(.38, "rgba(32,119,186,.82)");
+          gradient.addColorStop(.56, "rgba(195,242,252,.76)");
+          gradient.addColorStop(.76, "rgba(42,151,207,.82)");
+          gradient.addColorStop(1, "rgba(20,89,158,.78)");
+        } else {
+          gradient.addColorStop(0, "rgba(248,254,255,.92)");
+          gradient.addColorStop(.2, "rgba(153,224,241,.7)");
+          gradient.addColorStop(.4, "rgba(70,144,205,.8)");
+          gradient.addColorStop(.58, "rgba(222,249,255,.8)");
+          gradient.addColorStop(.8, "rgba(105,199,229,.76)");
+          gradient.addColorStop(1, "rgba(67,112,185,.8)");
+        }
+        context.globalAlpha = strandAlpha * .2;
+        context.strokeStyle = gradient;
+        context.lineWidth = 28;
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.shadowColor = "rgba(73,178,222,.48)";
+        context.shadowBlur = 26;
+        context.beginPath();
+        for (let sample = 0; sample <= 280; sample += 1) {
+          const current = point(sample / 280, strand);
+          if (sample === 0) context.moveTo(current.x, current.y);
+          else context.lineTo(current.x, current.y);
+        }
+        context.stroke();
+        context.globalAlpha = strandAlpha * .78;
+        context.lineWidth = 11;
+        context.shadowBlur = 12;
+        context.beginPath();
+        for (let sample = 0; sample <= 280; sample += 1) {
+          const current = point(sample / 280, strand);
+          if (sample === 0) context.moveTo(current.x, current.y);
+          else context.lineTo(current.x, current.y);
+        }
+        context.stroke();
+
+        context.globalAlpha = strandAlpha * .7;
+        context.strokeStyle = strand === 0
+          ? "rgba(224,250,255,.8)"
+          : "rgba(246,253,255,.84)";
+        context.lineWidth = 2.1;
+        context.shadowColor = "rgba(255,255,255,.82)";
+        context.shadowBlur = 5;
+        context.beginPath();
+        for (let sample = 0; sample <= 280; sample += 1) {
+          const current = point(sample / 280, strand);
+          const highlightOffset = strand === 0 ? -2.4 : 2.4;
+          if (sample === 0) context.moveTo(current.x + highlightOffset, current.y);
+          else context.lineTo(current.x + highlightOffset, current.y);
+        }
+        context.stroke();
+        context.shadowBlur = 0;
+
+        for (let sparkle = 0; sparkle < 24; sparkle += 1) {
+          const u = (sparkle + .35) / 24;
+          const current = point(u, strand);
+          const radius = 1.2 + ((sparkle + strand) % 4) * .48;
+          const sparkleGradient = context.createRadialGradient(
+            current.x - radius * .3,
+            current.y - radius * .3,
+            .1,
+            current.x,
+            current.y,
+            radius,
+          );
+          sparkleGradient.addColorStop(0, "rgba(255,255,255,.98)");
+          sparkleGradient.addColorStop(.45, "rgba(203,244,252,.78)");
+          sparkleGradient.addColorStop(1, "rgba(65,169,218,0)");
+          context.globalAlpha = strandAlpha * (.45 + current.depth * .45);
+          context.fillStyle = sparkleGradient;
+          context.beginPath();
+          context.arc(current.x, current.y, radius, 0, Math.PI * 2);
+          context.fill();
+        }
+      });
+      context.restore();
+
+      if (unwinding && progress > .04 && progress < .96) {
+        const frontY = top + smooth(progress) * helixHeight;
+        const front = context.createLinearGradient(center - amplitude * 1.5, frontY, center + amplitude * 1.5, frontY);
+        front.addColorStop(0, "rgba(255,255,255,0)");
+        front.addColorStop(.5, "rgba(255,255,255,.95)");
+        front.addColorStop(1, "rgba(255,255,255,0)");
+        context.strokeStyle = front;
+        context.lineWidth = 3;
+        context.shadowColor = "rgba(73,195,232,.85)";
+        context.shadowBlur = 16;
+        context.beginPath();
+        context.moveTo(center - amplitude * 1.5, frontY);
+        context.lineTo(center + amplitude * 1.5, frontY);
+        context.stroke();
+      }
+
+      if (progress >= 1) {
+        if (!finished) {
+          finished = true;
+          completionRef.current();
+        }
+        return;
+      }
+      animationFrame = requestAnimationFrame(drawFrame);
+    };
+    animationFrame = requestAnimationFrame(drawFrame);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", resize);
+    };
+  }, [unwinding]);
+
+  return <canvas className="dna-animation-canvas" ref={canvasRef} aria-hidden="true" />;
+}
+
 export default function SinglePagePresentation() {
   const scroller = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
+  const touchStartY = useRef(0);
   const [activeSlide, setActiveSlide] = useState(0);
   const [tutorialOpen, setTutorialOpen] = useState(false);
-
-  useEffect(() => {
-    let hasSeen = false;
-    try { hasSeen = window.localStorage.getItem("pbmc3k-scroll-tour-v1") === "yes"; } catch {}
-    setTutorialOpen(!hasSeen);
-  }, []);
+  const [entryState, setEntryState] = useState<"ready" | "unwinding" | "entered">("ready");
 
   useEffect(() => {
     const root = scroller.current;
@@ -441,40 +770,67 @@ export default function SinglePagePresentation() {
     setActiveSlide(index);
     root.scrollTo({ left: index * root.clientWidth, behavior: "smooth" });
   };
+  const unwindIntoSite = () => {
+    if (entryState !== "ready") return;
+    setEntryState("unwinding");
+  };
 
   useEffect(() => {
-    const root = scroller.current;
-    if (!root) return;
-    const onWheel = (event: WheelEvent) => {
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    if (entryState !== "entered" || tutorialOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable='true']")) return;
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
-      root.scrollBy({ left: event.deltaY, behavior: "auto" });
+      const nextSlide = event.key === "ArrowLeft"
+        ? Math.max(0, activeSlide - 1)
+        : Math.min(7, activeSlide + 1);
+      if (nextSlide === activeSlide) return;
+      const root = scroller.current;
+      if (!root) return;
+      setActiveSlide(nextSlide);
+      root.scrollTo({ left: nextSlide * root.clientWidth, behavior: "smooth" });
     };
-    root.addEventListener("wheel", onWheel, { passive: false });
-    return () => root.removeEventListener("wheel", onWheel);
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft" && activeSlide > 0) goToSlide(activeSlide - 1);
-      if (event.key === "ArrowRight" && activeSlide < 7) goToSlide(activeSlide + 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [activeSlide]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeSlide, entryState, tutorialOpen]);
 
   return (
-    <div className="single-page-site">
+    <div className={`single-page-site ${entryState !== "ready" ? "is-revealing" : ""} ${entryState === "entered" ? "is-entered" : ""}`}>
+      {entryState !== "entered" && (
+        <section
+          className={`dna-entry ${entryState === "unwinding" ? "unwinding" : ""}`}
+          aria-label="Scroll down to unwind the DNA and enter the PBMC3k study"
+          onWheel={(event) => {
+            if (event.deltaY > 0) {
+              event.preventDefault();
+              unwindIntoSite();
+            }
+          }}
+          onTouchStart={(event) => { touchStartY.current = event.touches[0]?.clientY ?? 0; }}
+          onTouchMove={(event) => {
+            const currentY = event.touches[0]?.clientY ?? touchStartY.current;
+            if (touchStartY.current - currentY > 30) unwindIntoSite();
+          }}
+        >
+          <DnaEntranceCanvas unwinding={entryState === "unwinding"} onComplete={() => setEntryState("entered")} />
+          <div className="dna-entry-brand">
+            <span>THE BACKPROPAGATORS</span>
+            <strong>PBMC3K</strong>
+          </div>
+          <p className="dna-entry-instruction"><span>Scroll down</span> to unwind the sequence <b>↓</b></p>
+        </section>
+      )}
       <header className="onepage-header">
-        <button className="onepage-brand" onClick={() => goToSlide(0)}><Mark /><span>PBMC<span>3k</span></span></button>
+        <div className="onepage-brand"><Mark /><span>PBMC<span>3k</span></span></div>
         <div className="onepage-header-progress"><span>THE BACKPROPAGATORS</span><strong>{String(activeSlide + 1).padStart(2, "0")} / 08</strong></div>
         <button className="replay-tour" onClick={() => setTutorialOpen(true)}>How to view</button>
       </header>
       <nav className="slide-rail" aria-label="Presentation slides">
         {[{ id: "home" }, ...studySlides, { id: "test" }].map((slide, index) => (
-          <button key={slide.id} className={activeSlide === index ? "active" : ""} onClick={() => goToSlide(index)} aria-label={`Go to slide ${index + 1}`}>
+          <div key={slide.id} className={activeSlide === index ? "active" : ""} aria-current={activeSlide === index ? "step" : undefined}>
             <span>{String(index + 1).padStart(2, "0")}</span><i />
-          </button>
+          </div>
         ))}
       </nav>
       <nav className="slide-arrows" aria-label="Previous and next slide">
@@ -491,7 +847,7 @@ export default function SinglePagePresentation() {
                 We turned thousands of RNA measurements from individual blood cells into a map of immune-cell identities,
                 then tested whether machine learning could learn those patterns.
               </p>
-              <button className="cover-start" onClick={() => goToSlide(1)}>Begin the study <span>→</span></button>
+              <div className="cover-start">Use the arrows to begin <span>→</span></div>
               <div className="cover-stats" aria-label="Study overview">
                 <div><strong>2,700</strong><span>starting cells</span></div>
                 <div><strong>2,638</strong><span>after quality control</span></div>
@@ -499,7 +855,9 @@ export default function SinglePagePresentation() {
               </div>
             </div>
             <figure className="cover-visual">
-              <img src="/figures/cells-ml-hero.png" alt="Scientific illustration of immune cells sending molecular signals into a machine-learning network" />
+              <div className="cover-image-slot">
+                <img src="/figures/cells-ml-hero.png" alt="Scientific illustration of immune cells sending molecular signals into a machine-learning network" />
+              </div>
               <figcaption>
                 <span>CELLS → SIGNALS → PATTERNS</span>
                 <p>A conceptual view of RNA activity becoming patterns a machine-learning model can interpret.</p>

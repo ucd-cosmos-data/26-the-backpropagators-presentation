@@ -256,7 +256,7 @@ function Footer() {
 }
 
 function CellConstellation() {
-  const colors = ["#728455", "#a8ba80", "#d4a45c", "#7896af", "#c27b66"];
+  const colors = ["#246b9e", "#55b5d0", "#239c98", "#8a6fb7", "#d98555"];
   const points = useMemo(
     () =>
       Array.from({ length: 96 }, (_, i) => {
@@ -410,10 +410,10 @@ function Overview({ go }: { go: (route: Route, step?: ProcessKey) => void }) {
 function ConceptVisual({ index }: { index: number }) {
   if (index === 0) {
     const cellGroups = [
-      { short: "T", name: "T cells", role: "Coordinate and carry out adaptive immune responses", color: "#75855a" },
-      { short: "B", name: "B cells", role: "Produce antibodies and remember past infections", color: "#5f7eb8" },
-      { short: "NK", name: "NK cells", role: "Destroy infected or abnormal cells", color: "#a27a52" },
-      { short: "M", name: "Monocytes", role: "Sense danger and engulf foreign material", color: "#d66b4d" },
+      { short: "T", name: "T cells", role: "Coordinate and carry out adaptive immune responses", color: "#4e70b5" },
+      { short: "B", name: "B cells", role: "Produce antibodies and remember past infections", color: "#2f8fc3" },
+      { short: "NK", name: "NK cells", role: "Destroy infected or abnormal cells", color: "#239c98" },
+      { short: "M", name: "Monocytes", role: "Sense danger and engulf foreign material", color: "#d45f52" },
     ];
     return (
       <div className="concept-visual pbmc-diagram" role="img" aria-label="Four major PBMC families and their immune roles">
@@ -447,10 +447,10 @@ function ConceptVisual({ index }: { index: number }) {
     );
   }
   const markerRows = [
-    { type: "T cell", genes: ["CD3D", "IL7R"], color: "#75855a" },
-    { type: "B cell", genes: ["MS4A1", "CD79A"], color: "#5f7eb8" },
-    { type: "NK cell", genes: ["NKG7", "GNLY"], color: "#a27a52" },
-    { type: "Monocyte", genes: ["LYZ", "LST1"], color: "#d66b4d" },
+    { type: "T cell", genes: ["CD3D", "IL7R"], color: "#4e70b5" },
+    { type: "B cell", genes: ["MS4A1", "CD79A"], color: "#2f8fc3" },
+    { type: "NK cell", genes: ["NKG7", "GNLY"], color: "#239c98" },
+    { type: "Monocyte", genes: ["LYZ", "LST1"], color: "#d45f52" },
   ];
   return (
     <div className="concept-visual marker-program" role="img" aria-label="Marker-gene combinations used to distinguish four immune cell families">
