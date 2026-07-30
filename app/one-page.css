@@ -421,7 +421,13 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
 }
-.slide-figure-tabs { display: flex; gap: 9px; padding-bottom: 10px; overflow-x: auto; }
+.slide-figure-tabs {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
 .slide-figure-tabs button {
   flex: none;
   min-height: 38px;
@@ -505,17 +511,42 @@
 .slide-arrows button:last-child { border-color: var(--accent-dark); background: var(--accent-dark); color: white; }
 .slide-arrows button:disabled { opacity: .28; cursor: default; box-shadow: none; }
 
-.test-card { grid-template-rows: auto minmax(0, 1fr); }
+.test-card {
+  grid-template-rows: auto minmax(0, 1fr);
+  gap:  50px;
+}
 .model-test-body {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr);
   gap: clamp(32px, 5vw, 80px);
-  align-items: center;
+  align-items: start;
+  padding-top: 2px;
 }
-.model-test-body form > h2 { margin: 12px 0 10px; font-size: clamp(31px, 3.4vw, 52px); letter-spacing: -.05em; }
+.model-test-body form > h2 { margin: 9px 0 10px; font-size: clamp(31px, 3.4vw, 52px); letter-spacing: -.05em; }
 .model-test-body form > p { max-width: 500px; margin-bottom: 24px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .model-test-body label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: bold; }
+.model-dataset-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 0;
+  padding: 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper-2);
+}
+.model-dataset-switch button {
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.model-dataset-switch button.is-active { background: var(--accent-dark); color: var(--white); }
+.model-dataset-switch button:disabled { cursor: wait; opacity: .5; }
 .model-test-input { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; }
 .model-test-input input {
   min-width: 0;

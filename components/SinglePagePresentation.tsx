@@ -16,29 +16,48 @@ type StudySlide = {
 type CellPrediction = {
   number: number;
   barcode: string;
-  split: "training" | "validation" | "test";
+  cell_id?: string;
+  split: "training" | "validation" | "test" | "external";
   reviewed: string;
   predicted: string;
-  confidence: number;
+  confidence: number | null;
   probabilities: number[];
+  annotation_only?: boolean;
 };
 type PredictionPayload = {
+  dataset?: string;
   model: string;
   classes: string[];
   cell_count: number;
-  test_accuracy: number;
-  test_macro_f1: number;
+  test_accuracy?: number;
+  test_macro_f1?: number;
+  external_accuracy?: number;
   cells: CellPrediction[];
 };
+
+const modelDatasets = {
+  pbmc3k: {
+    label: "PBMC3k",
+    url: "/data/pbmc3k-cell-predictions.json",
+    description: "The original nine-class model results, including the original train, validation, and untouched test splits.",
+  },
+  pbmc4k: {
+    label: "PBMC4k",
+    url: "/data/pbmc4k-cell-predictions.json",
+    description: "An external donor tested with the PBMC3k-trained model. It reached 95.9% broad-label agreement across the six supported categories; reviewed dendritic cells are identified separately.",
+  },
+} as const;
+
+type DatasetKey = keyof typeof modelDatasets;
 
 const studySlides: StudySlide[] = [
   {
     id: "dataset",
     number: "01",
     eyebrow: "THE DATASET",
-    title: "2,700 blood cells, measured one cell at a time.",
+    title: "2,700 cells from our first donor",
     summary:
-      "PBMC3k is a single-cell RNA sequencing dataset from one healthy donor. Each cell is represented by counts of RNA molecules—the temporary instructions that cell was using when sampled.",
+      "PBMC3k is a single-cell RNA sequencing dataset from one healthy donor. Each cell is represented by counts of RNA, which arethe temporary instructions that cell was using when sampled.",
     notes: [
       { label: "Starting profiles", value: "2,700 cells" },
       { label: "Source", value: "10x Genomics" },
@@ -54,7 +73,7 @@ const studySlides: StudySlide[] = [
         src: "/figures/classification-class-balance.png",
         alt: "Bar chart showing the final counts of nine reviewed immune-cell types",
         label: "Cell populations",
-        caption: "The final atlas contains nine reviewed identities. Group sizes range from 602 memory/helper T cells to 11 platelets.",
+        caption: "",
       },
       {
         src: "/figures/leiden-clusters.png",
@@ -68,9 +87,9 @@ const studySlides: StudySlide[] = [
     id: "preprocessing",
     number: "02",
     eyebrow: "PREPROCESSING",
-    title: "Remove unreliable cells and make measurements comparable.",
+    title: "Processing messy data.",
     summary:
-      "Quality control filters likely empty droplets, damaged cells, and possible doublets. Normalization then prevents sequencing depth from controlling every comparison.",
+      "We used filters to clean data and retain only usable cells.",
     notes: [
       { label: "Retained", value: "2,638 · 97.7%" },
       { label: "Detected genes", value: "200–2,499" },
@@ -100,9 +119,9 @@ const studySlides: StudySlide[] = [
     id: "eda",
     number: "03",
     eyebrow: "EXPLORATORY ANALYSIS",
-    title: "Compress thousands of genes into a map of cellular similarity.",
+    title: "Find groups within thousands of cells.",
     summary:
-      "PCA summarizes coordinated gene variation. A 15-nearest-neighbor graph links similar cells, and UMAP plus t-SNE provide two visual checks of that structure.",
+      "We use various methods to simplify data into 2D projections.",
     notes: [
       { label: "PCA dimensions", value: "First 10" },
       { label: "Neighbors per cell", value: "15" },
@@ -132,9 +151,9 @@ const studySlides: StudySlide[] = [
     id: "clustering",
     number: "04",
     eyebrow: "CLUSTERING",
-    title: "Compare broad geometry with finer graph communities.",
+    title: "Finding patterns in the data.",
     summary:
-      "We tested K-means from K=2–10, then compared it with Leiden community detection. K=2 gave the clearest broad K-means split; Leiden resolution 0.5 produced nine reviewable communities.",
+      "We clustered data according to shared gene identities to create cell groups our model can learn from.",
     notes: [
       { label: "K-means tested", value: "K = 2–10" },
       { label: "Leiden resolution", value: "0.5" },
@@ -170,9 +189,9 @@ const studySlides: StudySlide[] = [
     id: "annotation",
     number: "05",
     eyebrow: "CELL-TYPE ANNOTATION",
-    title: "Use coordinated marker genes to name each community.",
+    title: "Uncovering cell types.",
     summary:
-      "Cluster numbers are not biological identities. Wilcoxon marker tests, multiple-testing correction, marker prevalence, known immune signatures, and human review turned nine clusters into nine cell-type labels.",
+      "Various tests, known immune signatures, and human review turned nine clusters into nine likely cell types.",
     notes: [
       { label: "Reviewed identities", value: "9 cell types" },
       { label: "Confidence", value: "7 high · 2 moderate" },
@@ -202,9 +221,9 @@ const studySlides: StudySlide[] = [
     id: "model",
     number: "06",
     eyebrow: "MODEL EVALUATION",
-    title: "Compare nine classifiers without letting the test set choose the winner.",
+    title: "May the best model win.",
     summary:
-      "A stratified 70/20/10 split created training, validation, and untouched test groups. Feature selection and tuning stayed inside training; validation macro-F1 selected XGBoost.",
+      "Evaluating various machine learning methods based on their accuracy in classifying a cell correctly led us to choose a model called XGBoost.",
     notes: [
       { label: "Split", value: "70% · 20% · 10%" },
       { label: "Selected model", value: "XGBoost" },
@@ -233,6 +252,38 @@ const studySlides: StudySlide[] = [
         alt: "Top genes selected using training cells only",
         label: "Training-only features",
         caption: "ANOVA feature selection used training cells only, preventing validation or test information from leaking into the model.",
+      },
+    ],
+  },
+  {
+    id: "second-donor",
+    number: "07",
+    eyebrow: "SECOND DONOR",
+    title: "Does this model work on someone else?",
+    summary:
+      "The dataset PBMC4k comes from a second healthy donor. We used it as a testing set to see if our model works on others - check our results on both datasets on the next slide!",
+    notes: [
+      { label: "Starting profiles", value: "4,340 cells" },
+      { label: "Final singlets", value: "4,131 cells" },
+      { label: "Reviewed identities", value: "9 cell types" },
+    ],
+    points: [
+      { term: "Independent review", explanation: "PBMC4k cell identities came from its own clusters and marker genes—not from the PBMC3k model's predictions." },
+      { term: "External donor", explanation: "Because XGBoost learned only from PBMC3k, PBMC4k tests whether its learned patterns transfer to a different person." },
+      { term: "Broad result", explanation: "After related T-cell states were combined into six broad categories, the model agreed with 95.9% of 4,097 supported PBMC4k cells. The 34 dendritic cells remained reviewed annotations outside the model." },
+    ],
+    figures: [
+      {
+        src: "/figures/pbmc4k-reviewed-annotations-umap.png",
+        alt: "PBMC4k Leiden clusters beside independently reviewed PBMC4k cell-type annotations",
+        label: "Second-donor map",
+        caption: "PBMC4k was clustered and labeled from its own expression patterns before it was used to evaluate the PBMC3k-trained model.",
+      },
+      {
+        src: "/figures/pbmc4k-marker-validation.png",
+        alt: "Dot plot validating reviewed PBMC4k cell types with immune marker genes",
+        label: "Independent markers",
+        caption: "Known immune-gene programs support the second donor's reviewed labels, providing a comparison target independent of XGBoost.",
       },
     ],
   },
@@ -288,33 +339,39 @@ function MethodSlide({ slide }: { slide: StudySlide }) {
 }
 
 function ModelTester() {
-  const [data, setData] = useState<PredictionPayload | null>(null);
+  const [payloads, setPayloads] = useState<Record<DatasetKey, PredictionPayload> | null>(null);
+  const [dataset, setDataset] = useState<DatasetKey>("pbmc3k");
   const [query, setQuery] = useState("42");
   const [selected, setSelected] = useState<CellPrediction | null>(null);
   const [error, setError] = useState("");
+  const data = payloads?.[dataset] ?? null;
 
   useEffect(() => {
     let active = true;
-    fetch("/data/pbmc3k-cell-predictions.json")
-      .then((response) => {
-        if (!response.ok) throw new Error("Prediction data unavailable");
-        return response.json() as Promise<PredictionPayload>;
-      })
-      .then((payload) => {
+    Promise.all(
+      (Object.entries(modelDatasets) as [DatasetKey, (typeof modelDatasets)[DatasetKey]][])
+        .map(async ([key, config]) => {
+          const response = await fetch(config.url);
+          if (!response.ok) throw new Error("Prediction data unavailable");
+          return [key, await response.json() as PredictionPayload] as const;
+        }),
+    )
+      .then((entries) => {
         if (!active) return;
-        setData(payload);
-        setSelected(payload.cells[41]);
+        const loaded = Object.fromEntries(entries) as Record<DatasetKey, PredictionPayload>;
+        setPayloads(loaded);
+        setSelected(loaded.pbmc3k.cells[41]);
       })
       .catch(() => active && setError("Prediction data could not be loaded."));
     return () => { active = false; };
   }, []);
 
   const topProbabilities = useMemo(() => {
-    if (!data || !selected) return [];
+    if (!data || !selected || selected.annotation_only) return [];
     return data.classes
       .map((name, index) => ({ name, value: selected.probabilities[index] }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 3);
+      .filter(({ value }) => Number((value * 100).toFixed(1)) > 0)
+      .sort((a, b) => b.value - a.value);
   }, [data, selected]);
 
   const selectCell = (cell: CellPrediction) => {
@@ -329,7 +386,10 @@ function ModelTester() {
     const trimmed = query.trim();
     const cell = /^\d+$/.test(trimmed)
       ? data.cells[Number(trimmed) - 1]
-      : data.cells.find((item) => item.barcode.toUpperCase() === trimmed.toUpperCase());
+      : data.cells.find((item) =>
+          item.barcode.toUpperCase() === trimmed.toUpperCase()
+          || item.cell_id?.toUpperCase() === trimmed.toUpperCase()
+        );
     if (!cell) {
       setError(`Enter a cell from 1 to ${data.cell_count.toLocaleString()} or a complete barcode.`);
       return;
@@ -342,16 +402,44 @@ function ModelTester() {
     selectCell(data.cells[Math.floor(Math.random() * data.cells.length)]);
   };
 
+  const changeDataset = (nextDataset: DatasetKey) => {
+    if (!payloads) return;
+    setDataset(nextDataset);
+    setSelected(null);
+    setQuery("");
+    setError("");
+  };
+
+  const annotationOnly = Boolean(selected?.annotation_only);
+  const splitLabel = selected?.split === "test"
+    ? "untouched test"
+    : selected?.split === "external"
+      ? "external test"
+      : selected?.split;
+
   return (
     <div className="study-card test-card">
       <header className="study-card-header">
-        <h1>Choose a real PBMC3k cell and inspect XGBoost’s prediction.</h1>
+        <h1>Try it: can our model guess your cell type?</h1>
       </header>
       <div className="model-test-body">
         <form onSubmit={submit}>
-          <span className="slide-eyebrow">INTERACTIVE LOOKUP</span>
+          <div className="model-dataset-switch" role="group" aria-label="Choose a dataset">
+            {(Object.keys(modelDatasets) as DatasetKey[]).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={dataset === key ? "is-active" : ""}
+                aria-pressed={dataset === key}
+                onClick={() => changeDataset(key)}
+                disabled={!payloads}
+              >
+                {modelDatasets[key].label}
+              </button>
+            ))}
+          </div>
           <h2>Enter a cell number</h2>
-          <p>This looks up saved predictions from the finalized model; it does not process new sequencing files.</p>
+          <p>{modelDatasets[dataset].description} This lookup does not process new sequencing files.</p>
           <label htmlFor="homepage-cell">Cell number or barcode</label>
           <div className="model-test-input">
             <input id="homepage-cell" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try 42" disabled={!data} />
@@ -364,20 +452,33 @@ function ModelTester() {
           {selected && data ? (
             <>
               <div className="prediction-heading">
-                <div><span>XGBOOST PREDICTS</span><h2>{selected.predicted}</h2></div>
-                <strong>{(selected.confidence * 100).toFixed(1)}%<small>confidence</small></strong>
+                <div><span>{annotationOnly ? "REVIEWED ANNOTATION" : "XGBOOST PREDICTS"}</span><h2>{selected.predicted}</h2></div>
+                {!annotationOnly && selected.confidence !== null && (
+                  <strong>{(selected.confidence * 100).toFixed(1)}%<small>confidence</small></strong>
+                )}
               </div>
-              <p className={selected.predicted === selected.reviewed ? "prediction-match" : "prediction-different"}>
-                {selected.predicted === selected.reviewed ? "Matches" : "Differs from"} reviewed label: <b>{selected.reviewed}</b>
+              <p className={annotationOnly || selected.predicted === selected.reviewed ? "prediction-match" : "prediction-different"}>
+                {annotationOnly
+                  ? <>Marker review identifies this cell as <b>Dendritic cells</b>; this is not an XGBoost prediction.</>
+                  : <>{selected.predicted === selected.reviewed ? "Matches" : "Differs from"} reviewed label: <b>{selected.reviewed}</b></>}
               </p>
-              <div className="top-probabilities">
-                {topProbabilities.map(({ name, value }) => (
-                  <div key={name}><p><span>{name}</span><strong>{(value * 100).toFixed(1)}%</strong></p><i><b style={{ width: `${value * 100}%` }} /></i></div>
-                ))}
-              </div>
-              <small>Cell {selected.number.toLocaleString()} · {selected.split === "test" ? "untouched test" : selected.split} split. Model confidence is not biological certainty.</small>
+              {!annotationOnly && (
+                <div className="top-probabilities">
+                  {topProbabilities.map(({ name, value }) => (
+                    <div key={name}><p><span>{name}</span><strong>{(value * 100).toFixed(1)}%</strong></p><i><b style={{ width: `${value * 100}%` }} /></i></div>
+                  ))}
+                </div>
+              )}
+              <small>
+                Cell {selected.number.toLocaleString()} · {splitLabel} split.{" "}
+                {annotationOnly
+                  ? "This result comes from reviewed PBMC4k marker annotation because dendritic cells are outside the model’s six-class scope."
+                  : dataset === "pbmc4k"
+                    ? "This donor was external to training; the PBMC3k-trained probabilities are combined into six broad categories. Model confidence is not biological certainty."
+                    : "Model confidence is not biological certainty."}
+              </small>
             </>
-          ) : <p>Loading saved model predictions…</p>}
+          ) : <p>{data ? `Choose a ${modelDatasets[dataset].label} cell to see its result.` : "Loading saved model predictions…"}</p>}
         </article>
       </div>
     </div>
@@ -737,6 +838,8 @@ function DnaEntranceCanvas({ unwinding, onComplete }: { unwinding: boolean; onCo
 }
 
 export default function SinglePagePresentation() {
+  const presentationSlideCount = studySlides.length + 2;
+  const lastSlideIndex = presentationSlideCount - 1;
   const scroller = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
   const touchStartY = useRef(0);
@@ -766,7 +869,7 @@ export default function SinglePagePresentation() {
   };
   const goToSlide = (index: number) => {
     const root = scroller.current;
-    if (!root || index < 0 || index > 7) return;
+    if (!root || index < 0 || index > lastSlideIndex) return;
     setActiveSlide(index);
     root.scrollTo({ left: index * root.clientWidth, behavior: "smooth" });
   };
@@ -784,7 +887,7 @@ export default function SinglePagePresentation() {
       event.preventDefault();
       const nextSlide = event.key === "ArrowLeft"
         ? Math.max(0, activeSlide - 1)
-        : Math.min(7, activeSlide + 1);
+        : Math.min(lastSlideIndex, activeSlide + 1);
       if (nextSlide === activeSlide) return;
       const root = scroller.current;
       if (!root) return;
@@ -793,7 +896,7 @@ export default function SinglePagePresentation() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeSlide, entryState, tutorialOpen]);
+  }, [activeSlide, entryState, tutorialOpen, lastSlideIndex]);
 
   return (
     <div className={`single-page-site ${entryState !== "ready" ? "is-revealing" : ""} ${entryState === "entered" ? "is-entered" : ""}`}>
@@ -823,7 +926,7 @@ export default function SinglePagePresentation() {
       )}
       <header className="onepage-header">
         <div className="onepage-brand"><Mark /><span>PBMC<span>3k</span></span></div>
-        <div className="onepage-header-progress"><span>THE BACKPROPAGATORS</span><strong>{String(activeSlide + 1).padStart(2, "0")} / 08</strong></div>
+        <div className="onepage-header-progress"><span>THE BACKPROPAGATORS</span><strong>{String(activeSlide + 1).padStart(2, "0")} / {String(presentationSlideCount).padStart(2, "0")}</strong></div>
         <button className="replay-tour" onClick={() => setTutorialOpen(true)}>How to view</button>
       </header>
       <nav className="slide-rail" aria-label="Presentation slides">
@@ -835,7 +938,7 @@ export default function SinglePagePresentation() {
       </nav>
       <nav className="slide-arrows" aria-label="Previous and next slide">
         <button onClick={() => goToSlide(activeSlide - 1)} disabled={activeSlide === 0} aria-label="Previous slide">←</button>
-        <button onClick={() => goToSlide(activeSlide + 1)} disabled={activeSlide === 7} aria-label="Next slide">→</button>
+        <button onClick={() => goToSlide(activeSlide + 1)} disabled={activeSlide === lastSlideIndex} aria-label="Next slide">→</button>
       </nav>
       <main className="slide-scroll" ref={scroller}>
         <section className="story-slide cover-slide" id="home" data-slide={0} ref={(element) => { slideRefs.current[0] = element; }}>
@@ -844,8 +947,8 @@ export default function SinglePagePresentation() {
               <span className="slide-eyebrow">THE BACKPROPAGATORS · PBMC3K</span>
               <h1>Can ML read the language of our cells?</h1>
               <p>
-                We turned thousands of RNA measurements from individual blood cells into a map of immune-cell identities,
-                then tested whether machine learning could learn those patterns.
+                We turned thousands of RNA measurements from one donor's individual blood cells into a map of immune-cell identities,
+                then tested whether machine learning could learn those patterns and apply them to another person.
               </p>
               <div className="cover-start">Use the arrows to begin <span>→</span></div>
               <div className="cover-stats" aria-label="Study overview">
@@ -858,10 +961,6 @@ export default function SinglePagePresentation() {
               <div className="cover-image-slot">
                 <img src="/figures/cells-ml-hero.png" alt="Scientific illustration of immune cells sending molecular signals into a machine-learning network" />
               </div>
-              <figcaption>
-                <span>CELLS → SIGNALS → PATTERNS</span>
-                <p>A conceptual view of RNA activity becoming patterns a machine-learning model can interpret.</p>
-              </figcaption>
             </figure>
           </div>
         </section>
@@ -870,7 +969,7 @@ export default function SinglePagePresentation() {
             <MethodSlide slide={slide} />
           </section>
         ))}
-        <section className="story-slide" id="test" data-slide={7} ref={(element) => { slideRefs.current[7] = element; }}>
+        <section className="story-slide" id="test" data-slide={lastSlideIndex} ref={(element) => { slideRefs.current[lastSlideIndex] = element; }}>
           <ModelTester />
         </section>
       </main>
