@@ -1441,7 +1441,7 @@ function ScrollTutorial({ open, onClose }: { open: boolean; onClose: () => void 
         <span>HOW TO EXPLORE</span>
         <div className="scroll-gesture" aria-hidden="true"><i>←</i><b>→</b></div>
         <h2 id="scroll-tutorial-title">Use the arrows to move through the presentation.</h2>
-        <p>Scrolling will not change slides. Captions on interactive graphs are provided for further review, but not necessary for understanding the project.</p>
+        <p>Click on graphs and scroll down for more information; captions on graphs are provided for further review, but not necessary for understanding the project.</p>
         <button className="start-scroll" onClick={onClose}>Start at the question <span>→</span></button>
       </section>
     </div>
@@ -1857,7 +1857,7 @@ export default function SinglePagePresentation() {
       {entryState !== "entered" && (
         <section
           className={`dna-entry ${entryState === "unwinding" ? "unwinding" : ""}`}
-          aria-label="Scroll down to unwind the DNA and enter the PBMC3k study"
+          aria-label="Scroll down to unwind the DNA and enter the PBMC3k presentation"
           onWheel={(event) => {
             if (event.deltaY > 0) {
               event.preventDefault();
