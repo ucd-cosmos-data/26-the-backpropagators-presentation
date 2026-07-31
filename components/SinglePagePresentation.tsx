@@ -57,7 +57,7 @@ const studySlides: StudySlide[] = [
     eyebrow: "THE DATASET",
     title: "2,700 cells from our first donor",
     summary:
-      "PBMC3k is a single-cell RNA sequencing dataset from one healthy donor. Each cell is represented by counts of RNA, which arethe temporary instructions that cell was using when sampled.",
+      "PBMC3k is a single-cell RNA sequencing dataset from one healthy donor. Each cell is represented by counts of RNA—the temporary instructions that cell was using when sampled.",
     notes: [
       { label: "Starting profiles", value: "2,700 cells" },
       { label: "Source", value: "10x Genomics" },
@@ -256,8 +256,142 @@ const studySlides: StudySlide[] = [
     ],
   },
   {
-    id: "second-donor",
+    id: "biological-interpretation",
     number: "07",
+    eyebrow: "BIOLOGICAL INTERPRETATION",
+    title: "Move from cluster labels to representative gene programs.",
+    summary:
+      "We ranked marker genes using fold change, specificity, prevalence, and statistical support. Ten representatives per cluster—90 cluster–gene entries spanning 78 unique genes—show what makes each population distinct. The largest population is IL7R+ memory/helper T cells at 22.8%; platelets are the smallest at 0.4%.",
+    notes: [
+      { label: "Markers reviewed", value: "90 entries" },
+      { label: "Unique genes", value: "78" },
+      { label: "Clusters covered", value: "9 of 9" },
+    ],
+    points: [
+      { term: "Composite ranking", explanation: "Genes rise when they combine a strong fold change with broad within-cluster expression and low expression elsewhere." },
+      { term: "Pilot analysis", explanation: "NK cells were the first detailed test: GZMB, FGFBP2, GNLY, PRF1, and NKG7 formed its clearest cytotoxic program." },
+      { term: "Composition", explanation: "Counts and percentages always accompany rare populations so an apparently perfect signal is not mistaken for a large sample." },
+    ],
+    figures: [
+      {
+        src: "/figures/cluster-percentages.png",
+        alt: "Bar chart showing the percentage of PBMC3k cells assigned to each of nine reviewed cell types",
+        label: "Population share",
+        caption: "IL7R+ memory/helper T cells are the largest group at 22.8%; the platelet population contains 11 cells, or 0.4%.",
+      },
+      {
+        src: "/figures/representative-marker-heatmap.png",
+        alt: "Heatmap of representative marker-gene expression across nine PBMC3k clusters",
+        label: "Gene programs",
+        caption: "Cluster-average expression reveals coordinated programs rather than relying on any single marker gene.",
+      },
+      {
+        src: "/figures/marker-specificity.png",
+        alt: "Marker specificity scores for the five strongest representative genes in each cluster",
+        label: "Marker specificity",
+        caption: "The top five saved representatives per cluster summarize how strongly each gene distinguishes its assigned population.",
+      },
+    ],
+  },
+  {
+    id: "literature",
+    number: "08",
+    eyebrow: "LITERATURE VALIDATION",
+    title: "Check every cluster against verified scientific evidence.",
+    summary:
+      "A PubMed-backed evidence layer covers all nine clusters and 78 unique representative genes. It contains 231 verified reference rows across 224 unique papers, with transparent A–E grades based on the strength of the selected evidence. Publication disease contexts are indexing information—not evidence that this donor had any disease.",
+    notes: [
+      { label: "Verified references", value: "231 rows" },
+      { label: "Unique PubMed papers", value: "224" },
+      { label: "Coverage", value: "9 clusters" },
+    ],
+    points: [
+      { term: "Evidence grades", explanation: "A and B require repeated human evidence; C reflects laboratory or animal evidence; D is computational; E marks limited support." },
+      { term: "Traceable claims", explanation: "Dataset observations, publication findings, and later interpretation remain separate so a citation cannot silently become a conclusion." },
+      { term: "Known gap", explanation: "One representative gene in the CD16+ non-classical monocyte cluster had insufficient direct evidence and remains explicitly unresolved." },
+    ],
+    figures: [
+      {
+        src: "/figures/evidence-validation-overview.png",
+        alt: "Overview of representative genes, verified PubMed evidence, reuse, and validation status across all clusters",
+        label: "Evidence audit",
+        caption: "Coverage and validation totals are calculated from the saved evidence files; repeated genes reuse the same verified literature.",
+      },
+      {
+        src: "/figures/final-cluster-summary.png",
+        alt: "Table of nine clusters with representative markers, annotation support, confidence, and dominant biological program",
+        label: "Evidence by cluster",
+        caption: "Each population stays connected to its strongest markers, evidence-supported program, confidence, and validation status.",
+      },
+    ],
+  },
+  {
+    id: "reasoning",
+    number: "09",
+    eyebrow: "EVIDENCE-GROUNDED REASONING",
+    title: "Turn evidence into cautious, testable biological conclusions.",
+    summary:
+      "Nine isolated cluster reports combined marker observations with verified literature under strict validation rules; all nine passed. B cells, classical monocytes, and platelets reached high reasoning confidence. Activated/transitional T cells remained low confidence, while the other five populations were moderate. A validation pass confirms grounded, structurally complete reasoning—not experimental proof.",
+    notes: [
+      { label: "Reports validated", value: "9 of 9" },
+      { label: "Validation failures", value: "0" },
+      { label: "Lowest confidence", value: "Activated T cells" },
+    ],
+    points: [
+      { term: "Two confidence layers", explanation: "The earlier 7-high/2-moderate annotation review and the later High/Moderate/Low reasoning confidence answer different questions and are not interchangeable." },
+      { term: "Strongest conclusions", explanation: "B-cell receptor identity, inflammatory classical-monocyte markers, and platelet membrane programs have the clearest combined support." },
+      { term: "Open questions", explanation: "The NK population may overlap related cytotoxic T, NKT, or gamma-delta T states, and RNA alone cannot establish protein activity." },
+    ],
+    figures: [
+      {
+        src: "/figures/biological-reasoning-summary.png",
+        alt: "Summary of annotation support, biological reasoning confidence, and validation status for all nine clusters",
+        label: "Reasoning confidence",
+        caption: "Qualitative categories are preserved as categories—not converted into artificial probabilities.",
+      },
+      {
+        src: "/figures/final-cluster-summary.png",
+        alt: "Final cluster summary showing cell types, top markers, support, confidence, and dominant programs",
+        label: "Final interpretation",
+        caption: "The final table keeps the biological conclusion beside the representative genes and level of uncertainty that support it.",
+      },
+    ],
+  },
+  {
+    id: "pipeline",
+    number: "10",
+    eyebrow: "FULL EVIDENCE PIPELINE",
+    title: "A reproducible map with explicit limits.",
+    summary:
+      "The finished workflow connects quality control, mapping, clustering, annotation, classification, marker ranking, literature integration, biological reasoning, and validation. Transcript enrichment does not prove protein abundance, secretion, pathway activation, or function. Clusters may contain multiple states, and evidence from other tissues or diseases may not transfer directly to healthy blood.",
+    notes: [
+      { label: "Analysis phases", value: "1–9" },
+      { label: "Reasoning validation", value: "9 passed" },
+      { label: "Core boundary", value: "RNA ≠ function" },
+    ],
+    points: [
+      { term: "Provenance", explanation: "Every conclusion can be traced backward from the final report to literature evidence, marker statistics, reviewed labels, and the processed cells." },
+      { term: "No diagnosis", explanation: "The study cannot infer disease, identity, race, ethnicity, or personality from this donor's cluster assignments." },
+      { term: "Generalization", explanation: "A second donor is a useful transfer test, but larger independently processed cohorts are still needed before clinical or population-level claims." },
+    ],
+    figures: [
+      {
+        src: "/figures/complete-analysis-pipeline.png",
+        alt: "Complete PBMC workflow from data loading through computational analysis, literature integration, reasoning, and validation",
+        label: "End-to-end provenance",
+        caption: "Computational analysis, literature evidence, biological interpretation, and validation remain visibly separate stages.",
+      },
+      {
+        src: "/figures/cluster-cell-counts.png",
+        alt: "Counts of cells in each of the nine final PBMC3k populations",
+        label: "Sample-size context",
+        caption: "Every biological claim should be read alongside its sample size, especially the 11-cell platelet population.",
+      },
+    ],
+  },
+  {
+    id: "second-donor",
+    number: "11",
     eyebrow: "SECOND DONOR",
     title: "Does this model work on someone else?",
     summary:
@@ -948,13 +1082,14 @@ export default function SinglePagePresentation() {
               <h1>Can ML read the language of our cells?</h1>
               <p>
                 We turned thousands of RNA measurements from one donor's individual blood cells into a map of immune-cell identities,
-                then tested whether machine learning could learn those patterns and apply them to another person.
+                tested whether machine learning could apply those patterns to another person, and grounded each population in verified scientific evidence.
               </p>
               <div className="cover-start">Use the arrows to begin <span>→</span></div>
               <div className="cover-stats" aria-label="Study overview">
                 <div><strong>2,700</strong><span>starting cells</span></div>
                 <div><strong>2,638</strong><span>after quality control</span></div>
                 <div><strong>9</strong><span>reviewed cell types</span></div>
+                <div><strong>224</strong><span>unique PubMed papers</span></div>
               </div>
             </div>
             <figure className="cover-visual">

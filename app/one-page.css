@@ -269,7 +269,7 @@
 .cover-start span { font-size: 18px; }
 .cover-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--line-strong);
 }
 .cover-stats div { padding: 17px 14px 0 0; }
