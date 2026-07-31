@@ -891,6 +891,17 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
 
   const activeHotspot = hotspots?.find((hotspot) => hotspot.id === activeHotspotId) ?? null;
 
+  const toggleHotspot = (hotspotId: string) => {
+    const nextPinned = pinnedHotspotId === hotspotId ? null : hotspotId;
+    setPinnedHotspotId(nextPinned);
+    setActiveHotspotId(nextPinned);
+  };
+
+  const closeHotspot = () => {
+    setPinnedHotspotId(null);
+    setActiveHotspotId(null);
+  };
+
   const updateImageLayout = () => {
     const viewport = viewportRef.current;
     const image = imageRef.current;
@@ -1043,10 +1054,7 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
     const remaining = [...pointersRef.current.values()][0];
     dragRef.current = remaining ? { pointer: remaining, view: { ...viewRef.current } } : null;
     if (completesGesture && !gestureMovedRef.current && tapHotspotRef.current) {
-      const hotspotId = tapHotspotRef.current;
-      const nextPinned = pinnedHotspotId === hotspotId ? null : hotspotId;
-      setPinnedHotspotId(nextPinned);
-      setActiveHotspotId(nextPinned);
+      toggleHotspot(tapHotspotRef.current);
     }
     if (completesGesture) tapHotspotRef.current = null;
   };
@@ -1150,9 +1158,13 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
                 }}
                 aria-label={`${hotspot.title}. ${hotspot.explanation}`}
                 aria-pressed={pinnedHotspotId === hotspot.id}
-                onMouseEnter={() => setActiveHotspotId(hotspot.id)}
-                onMouseLeave={() => {
-                  if (pinnedHotspotId !== hotspot.id) setActiveHotspotId(null);
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") setActiveHotspotId(hotspot.id);
+                }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType === "mouse" && pinnedHotspotId !== hotspot.id) {
+                    setActiveHotspotId(null);
+                  }
                 }}
                 onFocus={() => setActiveHotspotId(hotspot.id)}
                 onBlur={() => {
@@ -1160,9 +1172,7 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
                 }}
                 onClick={(event) => {
                   if (event.detail !== 0) return;
-                  const nextPinned = pinnedHotspotId === hotspot.id ? null : hotspot.id;
-                  setPinnedHotspotId(nextPinned);
-                  setActiveHotspotId(nextPinned);
+                  toggleHotspot(hotspot.id);
                 }}
               >
                 <span aria-hidden="true" />
@@ -1217,10 +1227,7 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
         <aside className="figure-mobile-explanation" aria-live="polite">
           <button
             type="button"
-            onClick={() => {
-              setPinnedHotspotId(null);
-              setActiveHotspotId(null);
-            }}
+            onClick={closeHotspot}
             aria-label="Close graph explanation"
           >
             ×

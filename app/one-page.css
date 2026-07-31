@@ -938,7 +938,12 @@
   .slide-summary p:first-child { font-size: 25px; }
   .slide-summary p::before { left: -26px; }
   .slide-visual { min-height: 360px; }
-  .slide-visual figure { min-height: 320px; }
+  .slide-visual figure {
+    height: auto;
+    min-height: 320px;
+    grid-template-rows: minmax(320px, 55vh) auto auto;
+    overflow: visible;
+  }
   .slide-visual figcaption { grid-template-columns: 1fr; gap: 5px; }
   .figure-hotspot { min-width: 44px; min-height: 44px; }
   .figure-hotspot.is-point { width: 44px; height: 44px; }
@@ -994,7 +999,12 @@
     color: var(--accent-dark);
     font: 700 9px monospace;
   }
-  .interactive-figure.is-expanded { inset: 8px; border-radius: 18px; }
+  .interactive-figure.is-expanded {
+    inset: 8px;
+    height: auto;
+    overflow-y: auto;
+    border-radius: 18px;
+  }
   .slide-arrows { right: 14px; bottom: 12px; }
   .slide-arrows button { width: 40px; height: 40px; }
   .model-test-body { gap: 26px; }
