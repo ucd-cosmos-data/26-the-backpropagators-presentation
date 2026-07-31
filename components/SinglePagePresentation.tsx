@@ -758,7 +758,7 @@ const studySlides: StudySlide[] = [
     eyebrow: "EVIDENCE-GROUNDED REASONING",
     title: "Turn evidence into cautious, testable biological conclusions.",
     summary:
-      "Nine isolated cluster reports combined marker observations with verified literature under strict validation rules; all nine passed. B cells, classical monocytes, and platelets reached high reasoning confidence. Activated/transitional T cells remained low confidence, while the other five populations were moderate. A validation pass confirms grounded, structurally complete reasoning—not experimental proof.",
+      "We evaluated generated groupings with genes known to be present in cell types. We confidently classified most cell types moderately or highly confidently, and only one cell type with lower confidence.",
     notes: [
       { label: "Reports validated", value: "9 of 9" },
       { label: "Validation failures", value: "0" },
@@ -790,7 +790,7 @@ const studySlides: StudySlide[] = [
     eyebrow: "FULL EVIDENCE PIPELINE",
     title: "How did we get here?",
     summary:
-      "Our process goes from quality control, mapping, clustering, annotation, classification, marker ranking, literature integration, biological reasoning, and to validation to produce our model.",
+      "Our process goes through lengthy processing, training, and external checks to produce our model.",
     notes: [
       { label: "Analysis phases", value: "1–9" },
       { label: "Reasoning validation", value: "9 passed" },
@@ -1213,6 +1213,24 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
             : "Scroll or pinch to zoom · drag to pan"}
         </div>
       </div>
+      {activeHotspot && (
+        <aside className="figure-mobile-explanation" aria-live="polite">
+          <button
+            type="button"
+            onClick={() => {
+              setPinnedHotspotId(null);
+              setActiveHotspotId(null);
+            }}
+            aria-label="Close graph explanation"
+          >
+            ×
+          </button>
+          <span>{activeHotspot.kicker}</span>
+          <strong>{activeHotspot.title}</strong>
+          <p>{activeHotspot.explanation}</p>
+          <small>Tap another highlighted area to explore more.</small>
+        </aside>
+      )}
       <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
     </figure>
   );
@@ -1415,8 +1433,8 @@ function ScrollTutorial({ open, onClose }: { open: boolean; onClose: () => void 
         <button onClick={onClose} aria-label="Close tutorial">×</button>
         <span>HOW TO EXPLORE</span>
         <div className="scroll-gesture" aria-hidden="true"><i>←</i><b>→</b></div>
-        <h2 id="scroll-tutorial-title">Use the arrows to move through the study.</h2>
-        <p>Use the bottom-right arrow buttons or your keyboard’s left and right arrow keys. Scrolling will not change slides.</p>
+        <h2 id="scroll-tutorial-title">Use the arrows to move through the presentation.</h2>
+        <p>Scrolling will not change slides. Captions on interactive graphs are provided for further review, but not necessary for understanding the project.</p>
         <button className="start-scroll" onClick={onClose}>Start at the question <span>→</span></button>
       </section>
     </div>

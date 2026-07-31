@@ -575,6 +575,7 @@
   font: 700 8px monospace;
   letter-spacing: .04em;
 }
+.figure-mobile-explanation { display: none; }
 .figure-tools {
   position: absolute;
   z-index: 4;
@@ -939,14 +940,60 @@
   .slide-visual { min-height: 360px; }
   .slide-visual figure { min-height: 320px; }
   .slide-visual figcaption { grid-template-columns: 1fr; gap: 5px; }
-  .figure-tools { top: 8px; right: 8px; }
-  .figure-tools button { width: 32px; height: 32px; }
-  .figure-interaction-hint { left: 8px; bottom: 8px; }
-  .figure-tooltip {
-    width: min(300px, calc(100% - 18px));
-    padding: 13px 14px;
+  .figure-hotspot { min-width: 44px; min-height: 44px; }
+  .figure-hotspot.is-point { width: 44px; height: 44px; }
+  .figure-hotspot.is-point > span { inset: 16px; }
+  .figure-hotspot::after {
+    border-color: rgba(11,94,139,.58);
+    background: rgba(92,190,218,.12);
   }
-  .figure-tooltip p { font-size: 10.5px; }
+  .figure-tools { top: 8px; right: 8px; }
+  .figure-tools button { width: 40px; height: 40px; }
+  .figure-interaction-hint { left: 8px; bottom: 8px; }
+  .figure-tooltip { display: none; }
+  .figure-mobile-explanation {
+    position: relative;
+    display: block;
+    padding: 17px 48px 17px 17px;
+    border-top: 1px solid var(--line-strong);
+    background: rgba(247,252,255,.98);
+    color: var(--ink);
+  }
+  .figure-mobile-explanation > button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--accent-dark);
+    font-size: 20px;
+  }
+  .figure-mobile-explanation > span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--accent);
+    font: 700 9px monospace;
+    letter-spacing: .12em;
+  }
+  .figure-mobile-explanation > strong {
+    display: block;
+    font-size: 18px;
+    line-height: 1.25;
+  }
+  .figure-mobile-explanation p {
+    margin: 8px 0 10px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .figure-mobile-explanation small {
+    color: var(--accent-dark);
+    font: 700 9px monospace;
+  }
   .interactive-figure.is-expanded { inset: 8px; border-radius: 18px; }
   .slide-arrows { right: 14px; bottom: 12px; }
   .slide-arrows button { width: 40px; height: 40px; }
