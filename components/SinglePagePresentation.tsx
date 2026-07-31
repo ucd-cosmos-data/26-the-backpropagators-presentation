@@ -686,9 +686,9 @@ const studySlides: StudySlide[] = [
     id: "biological-interpretation",
     number: "07",
     eyebrow: "BIOLOGICAL INTERPRETATION",
-    title: "Move from cluster labels to representative gene programs.",
+    title: "Using genes to decide cell function",
     summary:
-      "We ranked marker genes using fold change, specificity, prevalence, and statistical support. Ten representatives per cluster—90 cluster–gene entries spanning 78 unique genes—show what makes each population distinct. The largest population is IL7R+ memory/helper T cells at 22.8%; platelets are the smallest at 0.4%.",
+      "By looking at various genes expressed in cells, we can guess what kind of cell it is and its function.",
     notes: [
       { label: "Markers reviewed", value: "90 entries" },
       { label: "Unique genes", value: "78" },
@@ -724,9 +724,9 @@ const studySlides: StudySlide[] = [
     id: "literature",
     number: "08",
     eyebrow: "LITERATURE VALIDATION",
-    title: "Check every cluster against verified scientific evidence.",
+    title: "Check every grouping against verified scientific evidence.",
     summary:
-      "A PubMed-backed evidence layer covers all nine clusters and 78 unique representative genes. It contains 231 verified reference rows across 224 unique papers, with transparent A–E grades based on the strength of the selected evidence. Publication disease contexts are indexing information—not evidence that this donor had any disease.",
+      "We checked all cells and genes with scientific truth to ensure our information is not misleading.",
     notes: [
       { label: "Verified references", value: "231 rows" },
       { label: "Unique PubMed papers", value: "224" },
@@ -788,9 +788,9 @@ const studySlides: StudySlide[] = [
     id: "pipeline",
     number: "10",
     eyebrow: "FULL EVIDENCE PIPELINE",
-    title: "A reproducible map with explicit limits.",
+    title: "How did we get here?",
     summary:
-      "The finished workflow connects quality control, mapping, clustering, annotation, classification, marker ranking, literature integration, biological reasoning, and validation. Transcript enrichment does not prove protein abundance, secretion, pathway activation, or function. Clusters may contain multiple states, and evidence from other tissues or diseases may not transfer directly to healthy blood.",
+      "Our process goes from quality control, mapping, clustering, annotation, classification, marker ranking, literature integration, biological reasoning, and to validation to produce our model.",
     notes: [
       { label: "Analysis phases", value: "1–9" },
       { label: "Reasoning validation", value: "9 passed" },
