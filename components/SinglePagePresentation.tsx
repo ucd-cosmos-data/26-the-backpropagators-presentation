@@ -1,8 +1,33 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+  WheelEvent as ReactWheelEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-type Figure = { src: string; alt: string; label: string; caption: string };
+type FigureHotspot = {
+  id: string;
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  kicker: string;
+  title: string;
+  explanation: string;
+};
+type Figure = {
+  src: string;
+  alt: string;
+  label: string;
+  caption: string;
+  hotspots?: FigureHotspot[];
+};
 type StudySlide = {
   id: string;
   number: string;
@@ -49,6 +74,403 @@ const modelDatasets = {
 } as const;
 
 type DatasetKey = keyof typeof modelDatasets;
+
+const markerGenes = [
+  "CD8A", "CCL5", "MS4A1", "CD79A", "IL7R", "LTB", "S100A8", "FCN1", "FCGR3A",
+  "LST1", "GNLY", "NKG7", "GZMK", "IL32", "CCR7", "MAL", "PPBP", "PF4",
+] as const;
+
+const markerCellTypes = [
+  "IL7R+ memory/helper T cells",
+  "Classical monocytes",
+  "Naive/resting T cells",
+  "B cells",
+  "Cytotoxic CD8 T cells",
+  "CD16+ non-classical monocytes",
+  "NK cells",
+  "Activated/transitional T cells",
+  "Platelets",
+] as const;
+
+const markerGeneRoles: Record<(typeof markerGenes)[number], string> = {
+  CD8A: "CD8A supports a cytotoxic T-cell identity.",
+  CCL5: "CCL5 is associated with activated and cytotoxic lymphocyte programs.",
+  MS4A1: "MS4A1, also called CD20, is a canonical B-cell marker.",
+  CD79A: "CD79A is part of the B-cell receptor machinery.",
+  IL7R: "IL7R supports memory/helper and less-cytotoxic T-cell states.",
+  LTB: "LTB is common in lymphocyte identity and signaling programs.",
+  S100A8: "S100A8 is characteristic of inflammatory classical monocytes.",
+  FCN1: "FCN1 supports a classical-monocyte program.",
+  FCGR3A: "FCGR3A, also called CD16, supports non-classical monocytes and can also appear in NK cells.",
+  LST1: "LST1 is a broad myeloid-lineage marker.",
+  GNLY: "GNLY encodes granulysin and strongly supports cytotoxic NK-cell activity.",
+  NKG7: "NKG7 is shared by NK cells and cytotoxic T-cell states.",
+  GZMK: "GZMK marks a granzyme-associated cytotoxic or transitional T-cell program.",
+  IL32: "IL32 is frequently expressed across several T-cell states.",
+  CCR7: "CCR7 supports naive or resting T-cell trafficking and identity.",
+  MAL: "MAL is associated with less-differentiated and resting T-cell states.",
+  PPBP: "PPBP is a strong platelet-associated chemokine marker.",
+  PF4: "PF4 is a canonical platelet marker.",
+};
+
+const coreMarkerPrograms: Record<(typeof markerCellTypes)[number], readonly string[]> = {
+  "IL7R+ memory/helper T cells": ["IL7R", "LTB", "IL32"],
+  "Classical monocytes": ["S100A8", "FCN1", "LST1"],
+  "Naive/resting T cells": ["IL7R", "LTB", "IL32", "CCR7", "MAL"],
+  "B cells": ["MS4A1", "CD79A"],
+  "Cytotoxic CD8 T cells": ["CD8A", "CCL5", "NKG7", "GZMK", "IL32"],
+  "CD16+ non-classical monocytes": ["S100A8", "FCN1", "FCGR3A", "LST1"],
+  "NK cells": ["CCL5", "FCGR3A", "GNLY", "NKG7", "IL32"],
+  "Activated/transitional T cells": ["CD8A", "CCL5", "IL7R", "LTB", "NKG7", "GZMK", "IL32", "CCR7", "MAL"],
+  "Platelets": ["PPBP", "PF4"],
+};
+
+function buildMarkerDotplotHotspots(): FigureHotspot[] {
+  const plot = { left: 29.4, top: 5.5, width: 53.4, height: 72.8 };
+  const columnWidth = plot.width / markerGenes.length;
+  const rowHeight = plot.height / markerCellTypes.length;
+
+  return markerCellTypes.flatMap((cellType, row) =>
+    markerGenes.map((gene, column) => {
+      const supportsProgram = coreMarkerPrograms[cellType].includes(gene);
+      return {
+        id: `marker-${row}-${column}`,
+        x: plot.left + columnWidth * (column + 0.5),
+        y: plot.top + rowHeight * (row + 0.5),
+        width: columnWidth,
+        height: rowHeight,
+        kicker: supportsProgram ? "LABEL-SUPPORTING SIGNAL" : "CROSS-LINEAGE CHECK",
+        title: `${cellType} × ${gene}`,
+        explanation: `${markerGeneRoles[gene]} ${
+          supportsProgram
+            ? `At this intersection, the dot contributes to the coordinated marker program supporting the ${cellType} label.`
+            : "This intersection helps show whether the gene is absent, weakly shared, or expressed outside its best-known lineage; one cross-lineage signal should not outweigh the full marker program."
+        } Dot size is the fraction of cells expressing the gene; darker color means higher average expression within that cell type.`,
+      };
+    }),
+  );
+}
+
+const confusionLabels = [
+  "Activated T", "B cells", "CD16+ monocytes", "Classical monocytes", "Cytotoxic CD8 T",
+  "IL7R+ T", "NK cells", "Naive T", "Platelets",
+] as const;
+
+const confusionValues = [
+  [0.54, 0, 0, 0, 0.08, 0.31, 0, 0.08, 0],
+  [0, 1, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0.02, 0.98, 0, 0, 0, 0, 0],
+  [0.04, 0, 0, 0, 0.82, 0.07, 0.04, 0.04, 0],
+  [0.02, 0, 0, 0, 0.02, 0.92, 0, 0.05, 0],
+  [0, 0, 0, 0, 0.07, 0, 0.93, 0, 0],
+  [0.04, 0, 0, 0, 0.02, 0.11, 0, 0.82, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 1],
+] as const;
+
+function buildConfusionMatrixHotspots(): FigureHotspot[] {
+  const plot = { left: 17.5, top: 3.4, width: 79.7, height: 79.7 };
+  const cellWidth = plot.width / confusionLabels.length;
+  const cellHeight = plot.height / confusionLabels.length;
+
+  return confusionValues.flatMap((rowValues, row) =>
+    rowValues.map((value, column) => {
+      const isCorrect = row === column;
+      const percent = Math.round(value * 100);
+      return {
+        id: `confusion-${row}-${column}`,
+        x: plot.left + cellWidth * (column + 0.5),
+        y: plot.top + cellHeight * (row + 0.5),
+        width: cellWidth,
+        height: cellHeight,
+        kicker: isCorrect ? "CORRECT CLASSIFICATION" : value > 0 ? "MISCLASSIFICATION" : "NO OBSERVED ERROR",
+        title: `${confusionLabels[row]} → ${confusionLabels[column]}`,
+        explanation: isCorrect
+          ? `${percent}% of the untouched-test cells with the true label “${confusionLabels[row]}” were correctly predicted as that same class. Dark diagonal cells are the desired pattern.`
+          : value > 0
+            ? `${percent}% of true “${confusionLabels[row]}” test cells were predicted as “${confusionLabels[column]}.” This off-diagonal value reveals where the model confuses related expression states.`
+            : `No true “${confusionLabels[row]}” test cells were assigned to “${confusionLabels[column]}” in this held-out split. A zero in one small test set is not proof that the error can never occur.`,
+      };
+    }),
+  );
+}
+
+const modelComparisonHotspots: FigureHotspot[] = [
+  {
+    id: "model-xgboost",
+    x: 12.7,
+    y: 28,
+    width: 8.7,
+    height: 51,
+    kicker: "VALIDATION-SELECTED WINNER",
+    title: "XGBoost",
+    explanation: "XGBoost had the highest prespecified validation macro-F1, so it was selected before the untouched test results were used. The four bars compare validation macro-F1, validation ROC AUC, test macro-F1, and test ROC AUC.",
+  },
+  {
+    id: "model-logistic",
+    x: 22.3,
+    y: 28,
+    width: 8.7,
+    height: 51,
+    kicker: "IMPORTANT COMPARISON",
+    title: "Logistic regression",
+    explanation: "Logistic regression later produced stronger test estimates than XGBoost, but choosing it after seeing the test set would leak test information into model selection. This is why the validation rule matters.",
+  },
+  {
+    id: "model-neighbors",
+    x: 89.5,
+    y: 28,
+    width: 8.7,
+    height: 51,
+    kicker: "WEAKEST MODEL HERE",
+    title: "K-nearest neighbors",
+    explanation: "K-nearest neighbors performed substantially worse, especially on macro-F1. Its local-distance rule struggled more with the overlapping and imbalanced cell-type structure.",
+  },
+  {
+    id: "model-legend",
+    x: 27,
+    y: 47,
+    width: 40,
+    height: 16,
+    kicker: "HOW TO READ THE BARS",
+    title: "Validation versus untouched test",
+    explanation: "Macro-F1 gives every cell type equal weight, while ROC AUC measures ranking across one-vs-rest comparisons. Validation bars choose the model; test bars estimate performance only after that choice is frozen.",
+  },
+];
+
+function areaHotspot(
+  id: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  kicker: string,
+  title: string,
+  explanation: string,
+): FigureHotspot {
+  return { id, x, y, width, height, kicker, title, explanation };
+}
+
+const clusterComposition = [
+  ["Cytotoxic CD8 T cells", 273, "10.3%"],
+  ["B cells", 348, "13.2%"],
+  ["IL7R+ memory/helper T cells", 602, "22.8%"],
+  ["Classical monocytes", 502, "19.0%"],
+  ["CD16+ non-classical monocytes", 171, "6.5%"],
+  ["NK cells", 153, "5.8%"],
+  ["Activated/transitional T cells", 128, "4.9%"],
+  ["Naive/resting T cells", 450, "17.1%"],
+  ["Platelets", 11, "0.4%"],
+] as const;
+
+function buildCompositionHotspots(mode: "count" | "percentage"): FigureHotspot[] {
+  return clusterComposition.map(([cellType, count, percentage], index) =>
+    areaHotspot(
+      `composition-${mode}-${index}`,
+      12.2 + index * 9.65,
+      42,
+      8.5,
+      68,
+      index === 8 ? "RARE POPULATION" : index === 2 ? "LARGEST POPULATION" : "CLUSTER COMPOSITION",
+      cellType,
+      `${cellType} contains ${count.toLocaleString()} of the 2,638 retained cells (${percentage}). ${
+        index === 8
+          ? "With only 11 cells, platelet percentages and downstream performance estimates are especially sensitive to sampling."
+          : index === 2
+            ? "This is the largest reviewed population, so overall accuracy can be influenced strongly by how well the model handles it."
+            : "Population size provides essential context for marker certainty and classifier performance."
+      }`,
+    ),
+  );
+}
+
+const heatmapRowExplanations = [
+  ["C0 · Cytotoxic CD8 T cells", "Warm blocks among NKG7, CCL5, GZMA, CST7, and GZMK support a cytotoxic T-cell program."],
+  ["C1 · B cells", "The concentrated warm B-cell block includes CD79A, MS4A1, CD79B, and related B-cell identity genes."],
+  ["C2 · IL7R+ memory/helper T cells", "Warm IL32, IL7R, CD3D, LTB, and CD3E expression supports memory/helper T-cell identity."],
+  ["C3 · Classical monocytes", "S100A8, LGALS2, S100A9, FCN1, and CST3 form a strong classical-monocyte block."],
+  ["C4 · CD16+ non-classical monocytes", "FCGR3A, IFITM3, MS4A7, and LST1 distinguish the non-classical monocyte program."],
+  ["C5 · NK cells", "GZMB, FGFBP2, GNLY, PRF1, and NKG7 create the clearest cytotoxic NK-cell block."],
+  ["C6 · Activated/transitional T cells", "This row has a weaker, more diffuse pattern. That limited specificity is why the later reasoning confidence remains low."],
+  ["C7 · Naive/resting T cells", "CCR7 and a restrained T-cell identity program distinguish this population from more cytotoxic T-cell states."],
+  ["C8 · Platelets", "PPBP, PF4, GNG11, SDPR, and SPARC form a highly specific platelet block, but it comes from only 11 cells."],
+] as const;
+
+function buildHeatmapHotspots(): FigureHotspot[] {
+  return heatmapRowExplanations.map(([title, explanation], index) =>
+    areaHotspot(
+      `heatmap-row-${index}`,
+      52.2,
+      9.6 + index * 8.55,
+      82.5,
+      7.8,
+      index === 6 ? "WEAKER SPECIFICITY" : "CLUSTER EXPRESSION PROGRAM",
+      title,
+      `${explanation} Warm red means above-average expression for a gene across clusters; cool blue means below-average expression. Colors are gene-wise z-scores, not raw counts.`,
+    ),
+  );
+}
+
+const markerSpecificityPanels = [
+  ["C0 · Cytotoxic CD8 T cells", "NKG7 and CCL5 lead a coherent cytotoxic T-cell marker set."],
+  ["C1 · B cells", "CD79A and MS4A1 have very high specificity scores, making the B-cell program especially clear."],
+  ["C2 · IL7R+ memory/helper T cells", "IL32, IL7R, CD3D, LTB, and CD3E support this T-cell identity, though scores are lower than the clearest lineage markers."],
+  ["C3 · Classical monocytes", "S100A8, LGALS2, and S100A9 show strong specificity for classical monocytes."],
+  ["C4 · CD16+ non-classical monocytes", "FCGR3A leads the non-classical monocyte markers, followed by IFITM3, MS4A7, and LST1."],
+  ["C5 · NK cells", "GZMB, FGFBP2, GNLY, PRF1, and NKG7 form one of the strongest representative programs."],
+  ["C6 · Activated/transitional T cells", "Very low scores and several broadly expressed ribosomal genes show why this label is less specific and later receives low reasoning confidence."],
+  ["C7 · Naive/resting T cells", "CCR7 is the clearest marker here; the remaining T-cell genes overlap other related states."],
+  ["C8 · Platelets", "PPBP, PF4, GNG11, SDPR, and SPARC are highly specific, but the population contains only 11 cells."],
+] as const;
+
+function buildMarkerSpecificityHotspots(): FigureHotspot[] {
+  return markerSpecificityPanels.map(([title, explanation], index) =>
+    areaHotspot(
+      `specificity-panel-${index}`,
+      14.5 + (index % 3) * 35.5,
+      17 + Math.floor(index / 3) * 32.6,
+      25.5,
+      27,
+      index === 6 ? "LOW-SPECIFICITY WARNING" : "REPRESENTATIVE MARKERS",
+      title,
+      `${explanation} The marker score combines fold change, within-versus-outside prevalence, and statistical support; it is not a causal effect size.`,
+    ),
+  );
+}
+
+const evidenceOverviewHotspots: FigureHotspot[] = [
+  ["9 clusters", "All nine reviewed PBMC3k populations were included in the evidence workflow."],
+  ["90 cluster–gene entries", "Ten representative genes were selected for each of nine clusters. Repeated genes can appear in more than one cluster."],
+  ["78 unique genes", "After deduplicating the 90 cluster–gene entries, 78 distinct genes required evidence review."],
+  ["231 verified reference rows", "These are gene-to-publication evidence links. Multiple rows can point to the same PubMed paper."],
+  ["224 unique verified PMIDs", "Each unique PubMed identifier was verified against NCBI metadata; this is the distinct-paper count."],
+  ["11 reused genes", "When the same gene appeared in multiple clusters, its verified literature was reused while cluster-specific marker statistics stayed separate."],
+  ["9 Phase 8 validation passes", "Every cluster reasoning response passed the structural and evidence-grounding checks."],
+  ["0 Phase 8 validation failures", "No cluster response failed the validators. This confirms compliance with the evidence contract, not experimental proof."],
+  ["1 insufficient-evidence gene", "One representative gene lacked enough direct evidence and remained explicitly unresolved instead of receiving an invented claim."],
+].map(([title, explanation], index) =>
+  areaHotspot(
+    `evidence-card-${index}`,
+    17.5 + (index % 3) * 32.7,
+    21 + Math.floor(index / 3) * 31.3,
+    29,
+    25,
+    index === 8 ? "TRANSPARENT EVIDENCE GAP" : "AUDITABLE EVIDENCE TOTAL",
+    title,
+    explanation,
+  ),
+);
+
+const pipelineStages = [
+  ["PBMC3k raw data", "The workflow begins with the original single-cell count matrix; no labels are assumed yet."],
+  ["Explore", "File structure, cell barcodes, genes, and basic distributions are checked before modeling."],
+  ["Quality control", "Low-quality or unusually complex profiles are filtered using gene-count and mitochondrial-RNA criteria."],
+  ["Preprocess", "Counts are normalized and transformed so cells can be compared more fairly."],
+  ["Dimension reduction", "PCA compresses gene variation; a neighbor graph and UMAP summarize cell similarity."],
+  ["Cluster", "Leiden identifies graph communities while K-means and sensitivity checks provide cross-checks."],
+  ["Cell annotation", "Marker programs and human review turn numbered clusters into proposed cell-type labels."],
+  ["Marker discovery", "Representative genes are ranked using fold change, specificity, prevalence, and statistical support."],
+  ["ML classification", "Nine model families compete under a train/validation/untouched-test design; XGBoost wins by validation macro-F1."],
+  ["Verified literature", "Gene-level claims are tied to verified PubMed records with explicit A–E evidence grades."],
+  ["Biological reasoning", "Each cluster’s dataset observations and literature are combined under an isolated, evidence-grounded reasoning contract."],
+  ["Validation", "Schema, gene, citation, confidence, and safety checks ensure the report stays within supplied evidence."],
+  ["Validated reports", "The output is a traceable report for all nine clusters, including uncertainty and unresolved questions."],
+] as const;
+
+function buildPipelineHotspots(): FigureHotspot[] {
+  return pipelineStages.map(([title, explanation], index) =>
+    areaHotspot(
+      `pipeline-stage-${index}`,
+      4.8 + index * 7.5,
+      35.8,
+      6.4,
+      18,
+      `PIPELINE STAGE ${String(index + 1).padStart(2, "0")}`,
+      title,
+      explanation,
+    ),
+  );
+}
+
+const figureHotspotsBySource: Record<string, FigureHotspot[]> = {
+  "/figures/classification-class-balance.png": [
+    areaHotspot("balance-largest", 70, 14, 55, 8, "LARGEST CLASS", "IL7R+ memory/helper T cells", "This is the largest reviewed class with 602 cells. Its size makes it influential in overall accuracy, which is why macro-F1 is also reported."),
+    areaHotspot("balance-middle", 61, 39, 45, 37, "CLASS IMBALANCE", "Unequal population sizes", "The nine classes differ substantially in size. Accuracy alone can hide poor performance on smaller groups, so the project uses macro-F1 to weight each cell type equally."),
+    areaHotspot("balance-platelet", 46, 72, 8, 7, "RARE-CLASS WARNING", "Platelets: 11 cells", "The platelet group is only 0.4% of retained cells. Any percentage calculated from its one-cell test support is extremely unstable."),
+  ],
+  "/figures/leiden-clusters.png": [
+    areaHotspot("leiden-each-dot", 45, 45, 50, 55, "HOW TO READ THE MAP", "Each dot is one cell", "Nearby dots have similar RNA profiles in the selected PCA-neighbor space. UMAP location is a visual summary, not a physical location or direct biological measurement."),
+    areaHotspot("leiden-islands", 72, 44, 30, 45, "LOCAL STRUCTURE", "Separated islands and connected gradients", "Separated islands suggest distinct expression neighborhoods, while bridges and gradients can represent related or transitional states. Distance between faraway islands should not be over-interpreted."),
+    areaHotspot("leiden-colors", 88, 33, 15, 50, "COMMUNITY LABELS", "Colors are Leiden communities", "The numbers and colors come from graph clustering. Biological names are assigned later using marker genes and review—not from color or UMAP position alone."),
+  ],
+  "/figures/qc-retained-cell-distributions.png": [
+    areaHotspot("qc-library", 19.5, 55, 24, 48, "QUALITY-CONTROL DISTRIBUTION", "Library size", "This histogram counts total UMI molecules per retained cell. Very low totals can indicate weak capture; unusually high totals can indicate unusually complex droplets or doublets."),
+    areaHotspot("qc-genes", 52, 55, 25, 48, "FILTERED RANGE", "Detected genes per cell", "Cells were retained between 200 and 2,499 detected genes. The dashed lines mark the dataset-specific lower and upper thresholds."),
+    areaHotspot("qc-mito", 85.5, 55, 24, 48, "CELL-STRESS CHECK", "Mitochondrial RNA", "High mitochondrial RNA can signal damaged or stressed cells. The dashed line marks the less-than-5% retention threshold."),
+    areaHotspot("qc-total", 50, 8, 34, 8, "QC OUTCOME", "97.7% retained", "Quality control retained 2,638 of 2,700 profiles and removed 62. Retention alone does not prove every remaining droplet is a singlet."),
+  ],
+  "/figures/eda-pca-umap.png": [
+    areaHotspot("eda-pca-first", 13, 34, 11, 20, "LARGEST COMPONENT", "PC1 explains the most selected-gene variance", "The first principal component captures the single largest linear expression pattern, but it still explains only a small fraction of total variation."),
+    areaHotspot("eda-pca-ten", 23, 45, 28, 55, "DIMENSION CHOICE", "First 10 PCs used", "The dashed line marks the ten principal components used to construct the 15-neighbor graph. Later PCs each contribute much less variance."),
+    areaHotspot("eda-umap", 72, 48, 45, 58, "TWO-DIMENSIONAL EMBEDDING", "UMAP cell map", "Each dot is a cell and nearby points have similar graph neighborhoods. UMAP axes have no biological units, and island sizes or far-distance gaps are not exact measurements."),
+    areaHotspot("eda-tiny", 50, 52, 5, 10, "RARE POPULATION", "Tiny isolated platelet group", "The very small isolated group corresponds to the 11-cell platelet population. Its separation is visually strong, but its tiny sample size requires caution."),
+  ],
+  "/figures/umap-tsne-comparison.png": [
+    areaHotspot("embedding-umap", 27, 48, 43, 60, "EMBEDDING CROSS-CHECK", "UMAP view", "UMAP emphasizes local neighbor relationships and often preserves more continuous structure. Exact axis values and global distances should not be interpreted biologically."),
+    areaHotspot("embedding-tsne", 74, 48, 43, 60, "EMBEDDING CROSS-CHECK", "t-SNE view", "t-SNE uses a different nonlinear objective. Similar local groups across UMAP and t-SNE reduce concern that the visible neighborhoods are unique to one embedding method."),
+  ],
+  "/figures/clustering-kmeans-leiden-comparison.png": [
+    areaHotspot("cluster-kmeans", 24, 48, 44, 60, "BROAD GEOMETRIC SPLIT", "K-means: K = 2", "K-means partitions PCA space around two centers. It captures broad geometry but cannot follow the finer irregular communities visible in the graph."),
+    areaHotspot("cluster-leiden", 74, 48, 44, 60, "GRAPH COMMUNITIES", "Leiden: nine communities", "Leiden follows connectivity in the 15-neighbor graph and produces nine reviewable communities used for marker-based annotation."),
+    areaHotspot("cluster-ari", 50, 5, 42, 8, "METHOD AGREEMENT", "Adjusted Rand index = 0.206", "The low adjusted Rand index shows that K-means and Leiden encode substantially different partitions. That is expected because one is a two-group geometric cross-check and the other is a finer graph solution."),
+  ],
+  "/figures/kmeans-k2-k10-diagnostics.png": [
+    areaHotspot("kmeans-elbow", 29, 48, 38, 53, "ELBOW DIAGNOSTIC", "Within-cluster variation", "Inertia always falls as K increases. The geometric bend near K=4 suggests diminishing returns, but it does not uniquely determine the biologically useful solution."),
+    areaHotspot("kmeans-k2", 12, 38, 8, 45, "SELECTED BROAD SOLUTION", "K = 2", "K=2 has the strongest silhouette score and is retained as a broad geometric cross-check—not as the final cell-type resolution."),
+    areaHotspot("kmeans-k4", 21, 42, 7, 40, "GEOMETRIC ELBOW", "K = 4", "The elbow appears near K=4, illustrating that different diagnostics can recommend different resolutions."),
+    areaHotspot("kmeans-silhouette", 76, 48, 39, 53, "SEPARATION DIAGNOSTIC", "Silhouette score", "Higher silhouette values indicate tighter separation from neighboring groups. The decline after K=2 shows that forcing more spherical groups produces less clean K-means partitions."),
+  ],
+  "/figures/leiden-resolution-diagnostics.png": [
+    areaHotspot("leiden-count", 26, 23, 40, 28, "COMMUNITY COUNT", "Resolution controls granularity", "As resolution increases, Leiden finds more communities. Resolution 0.5 yields the nine-community reference."),
+    areaHotspot("leiden-separation", 75, 23, 40, 28, "SEPARATION", "Silhouette is near its best at 0.5", "Resolution 0.5 retains strong separation, close to the maximum at 0.4, while producing the desired reviewable structure."),
+    areaHotspot("leiden-stability", 26, 72, 40, 28, "REPEAT-RUN STABILITY", "Stable under repeated runs", "Adjusted Rand index measures agreement across repeated clustering runs. Resolution 0.5 is stable, though 0.6–0.7 are slightly higher."),
+    areaHotspot("leiden-qc", 75, 72, 40, 28, "TECHNICAL ASSOCIATION", "Lower QC association is preferable", "This panel checks whether clusters track technical-quality variables. Association increases above 0.5, arguing against using the highest resolutions."),
+    areaHotspot("leiden-selected", 50, 49, 7, 88, "BALANCED CHOICE", "Why resolution 0.5?", "The selected reference balances nine communities, good separation, repeat stability, manageable technical association, embedding review, and marker interpretability. It is a reasoned choice, not a mathematically unique truth."),
+  ],
+  "/figures/classification-top-selected-genes.png": [
+    areaHotspot("feature-score", 70, 91, 48, 8, "TRAINING-ONLY FEATURE SCORE", "ANOVA F score", "A higher score means the gene separated reviewed classes more strongly within training data. It is a univariate association score—not causal importance and not an XGBoost tree-importance value."),
+    areaHotspot("feature-top", 55, 12, 70, 8, "HIGHEST TRAINING SCORES", "TYROBP and CST3", "These myeloid-associated genes have the largest training-only ANOVA scores. Their ranking reflects class separation in the training partition."),
+    areaHotspot("feature-lineages", 55, 43, 70, 45, "MULTIPLE LINEAGES REPRESENTED", "Selected genes span immune programs", "The list includes myeloid genes, B-cell genes such as CD79A, cytotoxic genes such as NKG7 and GZMB, and platelet genes such as PF4 and GP9."),
+    areaHotspot("feature-leakage", 50, 4, 60, 7, "LEAKAGE SAFEGUARD", "Selection happened inside training data", "Validation and test cells did not influence this feature ranking, preventing information leakage into model selection."),
+  ],
+  "/figures/cluster-percentages.png": buildCompositionHotspots("percentage"),
+  "/figures/cluster-cell-counts.png": buildCompositionHotspots("count"),
+  "/figures/representative-marker-heatmap.png": buildHeatmapHotspots(),
+  "/figures/marker-specificity.png": buildMarkerSpecificityHotspots(),
+  "/figures/evidence-validation-overview.png": evidenceOverviewHotspots,
+  "/figures/complete-analysis-pipeline.png": buildPipelineHotspots(),
+  "/figures/final-cluster-summary.png": [
+    areaHotspot("summary-markers", 37, 50, 28, 80, "REPRESENTATIVE EVIDENCE", "Top marker genes", "These are the five highest-ranked representatives from the saved Phase 6 marker score—not an exhaustive gene list and not a causal signature."),
+    areaHotspot("summary-support", 59, 50, 16, 80, "ANNOTATION SUPPORT", "Strong versus partial support", "This column describes how well the combined evidence supports the proposed cell-type identity. It is separate from the original marker-review confidence."),
+    areaHotspot("summary-confidence", 71, 50, 13, 80, "REASONING CONFIDENCE", "High, moderate, or low", "This later confidence rating reflects evidence-grounded biological reasoning. It must not be conflated with the earlier seven-high/two-moderate annotation confidence."),
+    areaHotspot("summary-program", 87, 50, 20, 80, "DOMINANT PROGRAM", "Evidence-supported biological program", "The program summarizes coordinated functions supported by marker observations and literature while retaining uncertainty about protein activity and cellular state."),
+  ],
+  "/figures/biological-reasoning-summary.png": [
+    areaHotspot("reasoning-support", 38, 50, 24, 76, "ANNOTATION SUPPORT", "How strongly the cell-type name is supported", "Strong support indicates a coordinated and lineage-consistent evidence set; partial support means overlap or unresolved alternatives remain."),
+    areaHotspot("reasoning-confidence", 62, 50, 24, 76, "OVERALL REASONING CONFIDENCE", "Confidence in the combined interpretation", "B cells, classical monocytes, and platelets are high; activated/transitional T cells are low; the remaining populations are moderate."),
+    areaHotspot("reasoning-pass", 86, 50, 18, 76, "VALIDATION STATUS", "PASS does not mean experimentally proven", "PASS means the response obeyed the schema, used supplied genes and citations, stated uncertainty, and avoided unsupported claims. It is a reasoning-quality check."),
+  ],
+  "/figures/pbmc4k-reviewed-annotations-umap.png": [
+    areaHotspot("pbmc4k-clusters", 27, 48, 43, 62, "SECOND-DONOR CLUSTERING", "PBMC4k Leiden communities", "The second donor was clustered from its own RNA-neighbor graph. These communities were not created by the PBMC3k-trained classifier."),
+    areaHotspot("pbmc4k-labels", 73, 48, 43, 62, "INDEPENDENT REVIEW", "PBMC4k reviewed cell types", "Marker-gene review assigns biological names independently of XGBoost, creating a comparison target for external evaluation."),
+    areaHotspot("pbmc4k-boundary", 50, 7, 55, 8, "GENERALIZATION TEST", "Why a second donor matters", "Because PBMC4k comes from another person and is reviewed independently, agreement tests transfer beyond the original donor—though one extra donor is still not population-wide validation."),
+  ],
+  "/figures/pbmc4k-marker-validation.png": [
+    areaHotspot("pbmc4k-dot-size", 84, 44, 16, 45, "HOW TO READ DOT SIZE", "Fraction of PBMC4k cells expressing a marker", "Larger dots mean a greater fraction of cells in that reviewed PBMC4k type express the gene."),
+    areaHotspot("pbmc4k-dot-color", 92, 44, 12, 45, "HOW TO READ COLOR", "Average expression", "Darker or warmer color represents higher average expression within a reviewed cell type. Coordinated marker programs matter more than any one dot."),
+    areaHotspot("pbmc4k-independent", 48, 46, 64, 68, "INDEPENDENT LABEL CHECK", "Second-donor marker programs", "Canonical T-, B-, NK-, monocyte-, platelet-, and dendritic-cell markers support PBMC4k’s reviewed labels before those labels are compared with model predictions."),
+  ],
+};
 
 const studySlides: StudySlide[] = [
   {
@@ -208,6 +630,7 @@ const studySlides: StudySlide[] = [
         alt: "Marker-gene dot plot across nine reviewed cell types",
         label: "Marker evidence",
         caption: "Dot size is expression prevalence; color is mean expression. Coordinated columns support each reviewed identity.",
+        hotspots: buildMarkerDotplotHotspots(),
       },
       {
         src: "/figures/leiden-clusters.png",
@@ -240,12 +663,14 @@ const studySlides: StudySlide[] = [
         alt: "Validation and test metrics for nine classifiers",
         label: "Model comparison",
         caption: "XGBoost ranked first by the prespecified validation macro-F1. Test results were opened only after selection.",
+        hotspots: modelComparisonHotspots,
       },
       {
         src: "/figures/classification-confusion-matrix.png",
         alt: "Normalized confusion matrix for XGBoost test predictions",
         label: "Where errors occur",
         caption: "The diagonal represents correct calls; related T-cell states create the clearest remaining confusion.",
+        hotspots: buildConfusionMatrixHotspots(),
       },
       {
         src: "/figures/classification-top-selected-genes.png",
@@ -427,6 +852,370 @@ function Mark() {
   return <span className="onepage-mark" aria-hidden="true"><i /><i /><i /></span>;
 }
 
+type FigureView = { scale: number; x: number; y: number };
+type FigurePoint = { x: number; y: number };
+type FigureImageLayout = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+};
+
+const MIN_FIGURE_SCALE = 1;
+const MAX_FIGURE_SCALE = 6;
+
+function InteractiveFigure({ figure }: { figure: Figure }) {
+  const hotspots = figure.hotspots ?? figureHotspotsBySource[figure.src];
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const pointersRef = useRef(new Map<number, FigurePoint>());
+  const gestureMovedRef = useRef(false);
+  const tapHotspotRef = useRef<string | null>(null);
+  const dragRef = useRef<{ pointer: FigurePoint; view: FigureView } | null>(null);
+  const pinchRef = useRef<{
+    distance: number;
+    midpoint: FigurePoint;
+    view: FigureView;
+  } | null>(null);
+  const viewRef = useRef<FigureView>({ scale: 1, x: 0, y: 0 });
+  const [view, setView] = useState<FigureView>(viewRef.current);
+  const [hover, setHover] = useState<FigurePoint | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [imageLayout, setImageLayout] = useState<FigureImageLayout | null>(null);
+  const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null);
+  const [pinnedHotspotId, setPinnedHotspotId] = useState<string | null>(null);
+
+  const activeHotspot = hotspots?.find((hotspot) => hotspot.id === activeHotspotId) ?? null;
+
+  const updateImageLayout = () => {
+    const viewport = viewportRef.current;
+    const image = imageRef.current;
+    if (!viewport || !image?.naturalWidth || !image.naturalHeight) return;
+    const viewportWidth = viewport.clientWidth;
+    const viewportHeight = viewport.clientHeight;
+    const imageAspect = image.naturalWidth / image.naturalHeight;
+    const viewportAspect = viewportWidth / Math.max(viewportHeight, 1);
+    const width = viewportAspect > imageAspect ? viewportHeight * imageAspect : viewportWidth;
+    const height = viewportAspect > imageAspect ? viewportHeight : viewportWidth / imageAspect;
+    setImageLayout({
+      left: (viewportWidth - width) / 2,
+      top: (viewportHeight - height) / 2,
+      width,
+      height,
+      viewportWidth,
+      viewportHeight,
+    });
+  };
+
+  const commitView = (next: FigureView) => {
+    const viewport = viewportRef.current;
+    const scale = Math.min(MAX_FIGURE_SCALE, Math.max(MIN_FIGURE_SCALE, next.scale));
+    if (!viewport || scale === MIN_FIGURE_SCALE) {
+      viewRef.current = { scale, x: 0, y: 0 };
+      setView(viewRef.current);
+      return;
+    }
+    const bounds = viewport.getBoundingClientRect();
+    const maxX = bounds.width * (scale - 1) / 2;
+    const maxY = bounds.height * (scale - 1) / 2;
+    viewRef.current = {
+      scale,
+      x: Math.max(-maxX, Math.min(maxX, next.x)),
+      y: Math.max(-maxY, Math.min(maxY, next.y)),
+    };
+    setView(viewRef.current);
+  };
+
+  const zoomAt = (requestedScale: number, clientPoint?: FigurePoint) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const current = viewRef.current;
+    const scale = Math.min(MAX_FIGURE_SCALE, Math.max(MIN_FIGURE_SCALE, requestedScale));
+    if (scale === current.scale) return;
+    const bounds = viewport.getBoundingClientRect();
+    const focal = clientPoint
+      ? { x: clientPoint.x - bounds.left - bounds.width / 2, y: clientPoint.y - bounds.top - bounds.height / 2 }
+      : { x: 0, y: 0 };
+    const ratio = scale / current.scale;
+    commitView({
+      scale,
+      x: focal.x - (focal.x - current.x) * ratio,
+      y: focal.y - (focal.y - current.y) * ratio,
+    });
+  };
+
+  const updateHover = (clientX: number, clientY: number) => {
+    const bounds = viewportRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    setHover({
+      x: Math.max(0, Math.min(100, ((clientX - bounds.left) / bounds.width) * 100)),
+      y: Math.max(0, Math.min(100, ((clientY - bounds.top) / bounds.height) * 100)),
+    });
+  };
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest(".figure-tools")) return;
+    gestureMovedRef.current = false;
+    tapHotspotRef.current =
+      (event.target as HTMLElement).closest<HTMLElement>(".figure-hotspot")?.dataset.hotspotId ?? null;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size === 1) {
+      dragRef.current = {
+        pointer: { x: event.clientX, y: event.clientY },
+        view: { ...viewRef.current },
+      };
+    } else if (pointersRef.current.size === 2) {
+      const [first, second] = [...pointersRef.current.values()];
+      pinchRef.current = {
+        distance: Math.hypot(second.x - first.x, second.y - first.y),
+        midpoint: { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 },
+        view: { ...viewRef.current },
+      };
+      dragRef.current = null;
+    }
+  };
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse") updateHover(event.clientX, event.clientY);
+    if (!pointersRef.current.has(event.pointerId)) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    if (pointersRef.current.size === 2 && pinchRef.current) {
+      event.preventDefault();
+      gestureMovedRef.current = true;
+      const [first, second] = [...pointersRef.current.values()];
+      const distance = Math.hypot(second.x - first.x, second.y - first.y);
+      const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+      const start = pinchRef.current;
+      const scale = Math.min(
+        MAX_FIGURE_SCALE,
+        Math.max(MIN_FIGURE_SCALE, start.view.scale * distance / Math.max(start.distance, 1)),
+      );
+      const bounds = viewportRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const startFocal = {
+        x: start.midpoint.x - bounds.left - bounds.width / 2,
+        y: start.midpoint.y - bounds.top - bounds.height / 2,
+      };
+      const currentFocal = {
+        x: midpoint.x - bounds.left - bounds.width / 2,
+        y: midpoint.y - bounds.top - bounds.height / 2,
+      };
+      const ratio = scale / start.view.scale;
+      commitView({
+        scale,
+        x: currentFocal.x - (startFocal.x - start.view.x) * ratio,
+        y: currentFocal.y - (startFocal.y - start.view.y) * ratio,
+      });
+      return;
+    }
+
+    if (pointersRef.current.size === 1 && dragRef.current && viewRef.current.scale > 1) {
+      event.preventDefault();
+      if (
+        Math.hypot(
+          event.clientX - dragRef.current.pointer.x,
+          event.clientY - dragRef.current.pointer.y,
+        ) > 5
+      ) {
+        gestureMovedRef.current = true;
+      }
+      commitView({
+        ...dragRef.current.view,
+        x: dragRef.current.view.x + event.clientX - dragRef.current.pointer.x,
+        y: dragRef.current.view.y + event.clientY - dragRef.current.pointer.y,
+      });
+    }
+  };
+
+  const finishPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const completesGesture = pointersRef.current.size === 1;
+    pointersRef.current.delete(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    pinchRef.current = null;
+    const remaining = [...pointersRef.current.values()][0];
+    dragRef.current = remaining ? { pointer: remaining, view: { ...viewRef.current } } : null;
+    if (completesGesture && !gestureMovedRef.current && tapHotspotRef.current) {
+      const hotspotId = tapHotspotRef.current;
+      const nextPinned = pinnedHotspotId === hotspotId ? null : hotspotId;
+      setPinnedHotspotId(nextPinned);
+      setActiveHotspotId(nextPinned);
+    }
+    if (completesGesture) tapHotspotRef.current = null;
+  };
+
+  const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const factor = Math.exp(-event.deltaY * 0.002);
+    zoomAt(viewRef.current.scale * factor, { x: event.clientX, y: event.clientY });
+  };
+
+  const onDoubleClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest(".figure-tools, .figure-hotspot")) return;
+    zoomAt(viewRef.current.scale > 1 ? 1 : 2.5, { x: event.clientX, y: event.clientY });
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && expanded) setExpanded(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expanded]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(updateImageLayout);
+    observer.observe(viewport);
+    updateImageLayout();
+    return () => observer.disconnect();
+  }, [expanded]);
+
+  const hotspotPosition = activeHotspot && imageLayout
+    ? (() => {
+        const baseX = imageLayout.left + imageLayout.width * activeHotspot.x / 100;
+        const baseY = imageLayout.top + imageLayout.height * activeHotspot.y / 100;
+        const centerX = imageLayout.viewportWidth / 2;
+        const centerY = imageLayout.viewportHeight / 2;
+        return {
+          x: centerX + view.x + view.scale * (baseX - centerX),
+          y: centerY + view.y + view.scale * (baseY - centerY),
+        };
+      })()
+    : null;
+
+  return (
+    <figure className={expanded ? "interactive-figure is-expanded" : "interactive-figure"}>
+      <div
+        className={view.scale > 1 ? "figure-viewport is-zoomed" : "figure-viewport"}
+        ref={viewportRef}
+        tabIndex={0}
+        role="application"
+        aria-label={`Interactive view of ${figure.label}. Use the mouse wheel or pinch to zoom, and drag to pan.`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={finishPointer}
+        onPointerCancel={finishPointer}
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse" && pointersRef.current.size === 0) setHover(null);
+        }}
+        onWheel={onWheel}
+        onDoubleClick={onDoubleClick}
+        onKeyDown={(event) => {
+          if (event.key === "+" || event.key === "=") {
+            event.preventDefault();
+            zoomAt(viewRef.current.scale * 1.35);
+          } else if (event.key === "-") {
+            event.preventDefault();
+            zoomAt(viewRef.current.scale / 1.35);
+          } else if (event.key === "0") {
+            event.preventDefault();
+            commitView({ scale: 1, x: 0, y: 0 });
+          }
+        }}
+      >
+        <img
+          ref={imageRef}
+          src={figure.src}
+          alt={figure.alt}
+          draggable={false}
+          onLoad={updateImageLayout}
+          style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }}
+        />
+        {hotspots && imageLayout && (
+          <div
+            className="figure-hotspot-layer"
+            aria-label="Interactive graph explanations"
+            style={{ transform: `translate3d(${view.x}px, ${view.y}px, 0) scale(${view.scale})` }}
+          >
+            {hotspots.map((hotspot) => (
+              <button
+                className={`figure-hotspot ${hotspot.width ? "is-area" : "is-point"} ${activeHotspotId === hotspot.id ? "is-active" : ""}`}
+                key={hotspot.id}
+                type="button"
+                data-hotspot-id={hotspot.id}
+                style={{
+                  left: imageLayout.left + imageLayout.width * hotspot.x / 100,
+                  top: imageLayout.top + imageLayout.height * hotspot.y / 100,
+                  width: hotspot.width ? imageLayout.width * hotspot.width / 100 : undefined,
+                  height: hotspot.height ? imageLayout.height * hotspot.height / 100 : undefined,
+                }}
+                aria-label={`${hotspot.title}. ${hotspot.explanation}`}
+                aria-pressed={pinnedHotspotId === hotspot.id}
+                onMouseEnter={() => setActiveHotspotId(hotspot.id)}
+                onMouseLeave={() => {
+                  if (pinnedHotspotId !== hotspot.id) setActiveHotspotId(null);
+                }}
+                onFocus={() => setActiveHotspotId(hotspot.id)}
+                onBlur={() => {
+                  if (pinnedHotspotId !== hotspot.id) setActiveHotspotId(null);
+                }}
+                onClick={(event) => {
+                  if (event.detail !== 0) return;
+                  const nextPinned = pinnedHotspotId === hotspot.id ? null : hotspot.id;
+                  setPinnedHotspotId(nextPinned);
+                  setActiveHotspotId(nextPinned);
+                }}
+              >
+                <span aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
+        {activeHotspot && hotspotPosition && imageLayout && (
+          <aside
+            className={`figure-tooltip ${hotspotPosition.x > imageLayout.viewportWidth * 0.58 ? "align-right" : ""} ${hotspotPosition.y > imageLayout.viewportHeight * 0.68 ? "align-bottom" : ""}`}
+            style={{
+              left: Math.max(10, Math.min(imageLayout.viewportWidth - 10, hotspotPosition.x)),
+              top: Math.max(10, Math.min(imageLayout.viewportHeight - 10, hotspotPosition.y)),
+            }}
+            role="tooltip"
+          >
+            <span>{activeHotspot.kicker}</span>
+            <strong>{activeHotspot.title}</strong>
+            <p>{activeHotspot.explanation}</p>
+            <small>{pinnedHotspotId === activeHotspot.id ? "Pinned · tap again to close" : "Tap to pin this explanation"}</small>
+          </aside>
+        )}
+        <div className="figure-tools" aria-label="Figure controls">
+          <button type="button" onClick={() => zoomAt(view.scale * 1.35)} aria-label="Zoom in" title="Zoom in">+</button>
+          <button type="button" onClick={() => zoomAt(view.scale / 1.35)} aria-label="Zoom out" title="Zoom out">−</button>
+          <button
+            type="button"
+            onClick={() => commitView({ scale: 1, x: 0, y: 0 })}
+            aria-label="Reset zoom"
+            title="Reset zoom"
+          >
+            1×
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            aria-label={expanded ? "Close expanded figure" : "Expand figure"}
+            title={expanded ? "Close expanded figure" : "Expand figure"}
+          >
+            {expanded ? "×" : "↗"}
+          </button>
+        </div>
+        <div className="figure-interaction-hint" aria-hidden="true">
+          {hotspots
+            ? "Hover or tap data marks for meaning · pinch to zoom"
+            : hover
+            ? `${hover.x.toFixed(0)}% × ${hover.y.toFixed(0)}% · ${view.scale.toFixed(1)}×`
+            : "Scroll or pinch to zoom · drag to pan"}
+        </div>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
 function FigureViewer({ figures }: { figures: Figure[] }) {
   const [active, setActive] = useState(0);
   const figure = figures[active];
@@ -440,10 +1229,7 @@ function FigureViewer({ figures }: { figures: Figure[] }) {
           </button>
         ))}
       </div>
-      <figure>
-        <img src={figure.src} alt={figure.alt} />
-        <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
-      </figure>
+      <InteractiveFigure figure={figure} key={figure.src} />
     </div>
   );
 }
@@ -1064,10 +1850,22 @@ export default function SinglePagePresentation() {
         <button className="replay-tour" onClick={() => setTutorialOpen(true)}>How to view</button>
       </header>
       <nav className="slide-rail" aria-label="Presentation slides">
-        {[{ id: "home" }, ...studySlides, { id: "test" }].map((slide, index) => (
-          <div key={slide.id} className={activeSlide === index ? "active" : ""} aria-current={activeSlide === index ? "step" : undefined}>
+        {[
+          { id: "home", title: "Introduction" },
+          ...studySlides.map((slide) => ({ id: slide.id, title: `${slide.eyebrow}: ${slide.title}` })),
+          { id: "test", title: "Interactive model tester" },
+        ].map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            className={activeSlide === index ? "active" : ""}
+            aria-current={activeSlide === index ? "step" : undefined}
+            aria-label={`Go to slide ${index + 1}: ${slide.title}`}
+            title={slide.title}
+            onClick={() => goToSlide(index)}
+          >
             <span>{String(index + 1).padStart(2, "0")}</span><i />
-          </div>
+          </button>
         ))}
       </nav>
       <nav className="slide-arrows" aria-label="Previous and next slide">
