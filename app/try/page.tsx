@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import SinglePagePresentation from "@/components/SinglePagePresentation";
 
 export default function TryPage() {
-  redirect("/");
+  return <SinglePagePresentation />;
 }

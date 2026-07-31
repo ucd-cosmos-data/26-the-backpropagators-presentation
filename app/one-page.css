@@ -6,7 +6,7 @@
   color: var(--ink);
   background:
     linear-gradient(rgba(224,242,250,.68), rgba(189,222,239,.76)),
-    url("/figures/dna-loading-background.png") center / cover fixed;
+    var(--dna-background-image) center / cover fixed;
 }
 .single-page-site::before {
   content: "";
@@ -39,7 +39,7 @@
   inset: 0;
   background:
     linear-gradient(145deg, rgba(242,250,254,.08), rgba(74,151,205,.12)),
-    url("/figures/dna-loading-background.png") center / cover no-repeat;
+    var(--dna-background-image) center / cover no-repeat;
   transition: opacity 1.35s cubic-bezier(.22,1,.36,1);
 }
 .dna-entry::before {

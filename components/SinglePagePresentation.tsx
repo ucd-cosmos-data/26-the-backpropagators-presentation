@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CSSProperties,
   FormEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
@@ -10,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { withBasePath } from "@/lib/paths";
 
 type FigureHotspot = {
   id: string;
@@ -1122,7 +1124,7 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
       >
         <img
           ref={imageRef}
-          src={figure.src}
+          src={withBasePath(figure.src)}
           alt={figure.alt}
           draggable={false}
           onLoad={updateImageLayout}
@@ -1271,7 +1273,7 @@ function ModelTester() {
     Promise.all(
       (Object.entries(modelDatasets) as [DatasetKey, (typeof modelDatasets)[DatasetKey]][])
         .map(async ([key, config]) => {
-          const response = await fetch(config.url);
+          const response = await fetch(withBasePath(config.url));
           if (!response.ok) throw new Error("Prediction data unavailable");
           return [key, await response.json() as PredictionPayload] as const;
         }),
@@ -1818,8 +1820,15 @@ export default function SinglePagePresentation() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeSlide, entryState, tutorialOpen, lastSlideIndex]);
 
+  const siteStyle = {
+    "--dna-background-image": `url("${withBasePath("/figures/dna-loading-background.png")}")`,
+  } as CSSProperties;
+
   return (
-    <div className={`single-page-site ${entryState !== "ready" ? "is-revealing" : ""} ${entryState === "entered" ? "is-entered" : ""}`}>
+    <div
+      className={`single-page-site ${entryState !== "ready" ? "is-revealing" : ""} ${entryState === "entered" ? "is-entered" : ""}`}
+      style={siteStyle}
+    >
       {entryState !== "entered" && (
         <section
           className={`dna-entry ${entryState === "unwinding" ? "unwinding" : ""}`}
@@ -1892,7 +1901,7 @@ export default function SinglePagePresentation() {
             </div>
             <figure className="cover-visual">
               <div className="cover-image-slot">
-                <img src="/figures/cells-ml-hero.png" alt="Scientific illustration of immune cells sending molecular signals into a machine-learning network" />
+                <img src={withBasePath("/figures/cells-ml-hero.png")} alt="Scientific illustration of immune cells sending molecular signals into a machine-learning network" />
               </div>
             </figure>
           </div>

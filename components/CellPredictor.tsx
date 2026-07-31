@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { withBasePath } from "@/lib/paths";
 
 type CellPrediction = {
   number: number;
@@ -46,7 +47,7 @@ export default function CellPredictor() {
 
   useEffect(() => {
     let active = true;
-    fetch("/data/pbmc3k-cell-predictions.json")
+    fetch(withBasePath("/data/pbmc3k-cell-predictions.json"))
       .then((response) => {
         if (!response.ok) throw new Error(`Prediction data returned ${response.status}`);
         return response.json() as Promise<PredictionPayload>;
