@@ -30,6 +30,36 @@ type Figure = {
   caption: string;
   hotspots?: FigureHotspot[];
 };
+
+const modelComparison = [
+  { model: "XGBoost", short: "XGBoost", validationF1: .9277, validationAuc: .9947, testF1: .8931, testAuc: .9905 },
+  { model: "Logistic regression", short: "Logistic", validationF1: .9152, validationAuc: .9960, testF1: .9339, testAuc: .9932 },
+  { model: "SGD (gradient descent)", short: "SGD", validationF1: .9112, validationAuc: .9944, testF1: .9325, testAuc: .9914 },
+  { model: "Support vector machine", short: "SVM", validationF1: .9008, validationAuc: .9899, testF1: .9067, testAuc: .9872 },
+  { model: "Extra Trees", short: "Extra Trees", validationF1: .8919, validationAuc: .9939, testF1: .8924, testAuc: .9939 },
+  { model: "Multinomial Naive Bayes", short: "Naive Bayes", validationF1: .8908, validationAuc: .9931, testF1: .8952, testAuc: .9912 },
+  { model: "MLP", short: "MLP", validationF1: .8825, validationAuc: .9909, testF1: .8854, testAuc: .9875 },
+  { model: "Random forest", short: "Random forest", validationF1: .8694, validationAuc: .9948, testF1: .8480, testAuc: .9914 },
+] as const;
+
+const comparisonMetrics = [
+  { key: "validationF1", label: "Validation macro-F1", className: "validation-f1" },
+  { key: "validationAuc", label: "Validation ROC AUC", className: "validation-auc" },
+  { key: "testF1", label: "Test macro-F1", className: "test-f1" },
+  { key: "testAuc", label: "Test ROC AUC", className: "test-auc" },
+] as const;
+
+const clusterEvidenceRows = [
+  ["C0", "Cytotoxic CD8 T cells", "NKG7, CCL5, GZMA, CST7, GZMK", "strongly supported", "Moderate", "Cytotoxic granule and effector-protease module"],
+  ["C1", "B cells", "CD79A, MS4A1, CD79B, TCL1A, HLA-DQA1", "strongly supported", "High", "B-cell receptor-associated identity module"],
+  ["C2", "IL7R+ memory/helper T cells", "IL32, IL7R, CD3D, LTB, CD3E", "partially supported", "Moderate", "T-cell identity and signaling module"],
+  ["C3", "Classical monocytes", "S100A8, LGALS2, S100A9, FCN1, CST3", "strongly supported", "High", "Inflammatory classical-monocyte marker module"],
+  ["C4", "CD16+ non-classical monocytes", "FCGR3A, IFITM3, MS4A7, RP11-290F20.3, LST1", "partially supported", "Moderate", "CD16-associated monocyte identity module"],
+  ["C5", "NK cells", "GZMB, FGFBP2, GNLY, PRF1, NKG7", "strongly supported", "Moderate", "Cytotoxic granule effector module"],
+  ["C6", "Activated/transitional T cells", "CCL5, IL32, CD3D, RPL23A, RPS3", "partially supported", "Low", "T-cell-associated marker module"],
+  ["C7", "Naive/resting T cells", "CCR7, CD3D, LDHB, PRKCQ-AS1, NOSIP", "partially supported", "Moderate", "T-cell identity module"],
+  ["C8", "Platelets", "PPBP, PF4, GNG11, SDPR, SPARC", "strongly supported", "High", "Platelet identity and membrane-function module"],
+] as const;
 type StudySlide = {
   id: string;
   number: string;
@@ -342,7 +372,6 @@ function buildMarkerSpecificityHotspots(): FigureHotspot[] {
 
 const evidenceOverviewHotspots: FigureHotspot[] = [
   ["9 clusters", "All nine reviewed PBMC3k populations were included in the evidence workflow."],
-  ["90 cluster–gene entries", "Ten representative genes were selected for each of nine clusters. Repeated genes can appear in more than one cluster."],
   ["78 unique genes", "After deduplicating the 90 cluster–gene entries, 78 distinct genes required evidence review."],
   ["231 verified reference rows", "These are gene-to-publication evidence links. Multiple rows can point to the same PubMed paper."],
   ["224 unique verified PMIDs", "Each unique PubMed identifier was verified against NCBI metadata; this is the distinct-paper count."],
@@ -376,7 +405,6 @@ const pipelineStages = [
   ["Verified literature", "Gene-level claims are tied to verified PubMed records with explicit A–E evidence grades."],
   ["Biological reasoning", "Each cluster’s dataset observations and literature are combined under an isolated, evidence-grounded reasoning contract."],
   ["Validation", "Schema, gene, citation, confidence, and safety checks ensure the report stays within supplied evidence."],
-  ["Validated reports", "The output is a traceable report for all nine clusters, including uncertainty and unresolved questions."],
 ] as const;
 
 function buildPipelineHotspots(): FigureHotspot[] {
@@ -457,10 +485,9 @@ const figureHotspotsBySource: Record<string, FigureHotspot[]> = {
     areaHotspot("summary-confidence", 71, 50, 13, 80, "REASONING CONFIDENCE", "High, moderate, or low", "This later confidence rating reflects evidence-grounded biological reasoning. It must not be conflated with the earlier seven-high/two-moderate annotation confidence."),
     areaHotspot("summary-program", 87, 50, 20, 80, "DOMINANT PROGRAM", "Evidence-supported biological program", "The program summarizes coordinated functions supported by marker observations and literature while retaining uncertainty about protein activity and cellular state."),
   ],
-  "/figures/biological-reasoning-summary.png": [
-    areaHotspot("reasoning-support", 38, 50, 24, 76, "ANNOTATION SUPPORT", "How strongly the cell-type name is supported", "Strong support indicates a coordinated and lineage-consistent evidence set; partial support means overlap or unresolved alternatives remain."),
-    areaHotspot("reasoning-confidence", 62, 50, 24, 76, "OVERALL REASONING CONFIDENCE", "Confidence in the combined interpretation", "B cells, classical monocytes, and platelets are high; activated/transitional T cells are low; the remaining populations are moderate."),
-    areaHotspot("reasoning-pass", 86, 50, 18, 76, "VALIDATION STATUS", "PASS does not mean experimentally proven", "PASS means the response obeyed the schema, used supplied genes and citations, stated uncertainty, and avoided unsupported claims. It is a reasoning-quality check."),
+  "/figures/biological-reasoning-summary-no-pass.png": [
+    areaHotspot("reasoning-support", 45, 50, 28, 76, "ANNOTATION SUPPORT", "How strongly the cell-type name is supported", "Strong support indicates a coordinated and lineage-consistent evidence set; partial support means overlap or unresolved alternatives remain."),
+    areaHotspot("reasoning-confidence", 73, 50, 28, 76, "OVERALL REASONING CONFIDENCE", "Confidence in the combined interpretation", "B cells, classical monocytes, and platelets are high; activated/transitional T cells are low; the remaining populations are moderate."),
   ],
   "/figures/pbmc4k-reviewed-annotations-umap.png": [
     areaHotspot("pbmc4k-clusters", 27, 48, 43, 62, "SECOND-DONOR CLUSTERING", "PBMC4k Leiden communities", "The second donor was clustered from its own RNA-neighbor graph. These communities were not created by the PBMC3k-trained classifier."),
@@ -771,16 +798,10 @@ const studySlides: StudySlide[] = [
     ],
     figures: [
       {
-        src: "/figures/biological-reasoning-summary.png",
+        src: "/figures/biological-reasoning-summary-no-pass.png",
         alt: "Summary of annotation support, biological reasoning confidence, and validation status for all nine clusters",
         label: "Reasoning confidence",
         caption: "Qualitative categories are preserved as categories—not converted into artificial probabilities.",
-      },
-      {
-        src: "/figures/final-cluster-summary.png",
-        alt: "Final cluster summary showing cell types, top markers, support, confidence, and dominant programs",
-        label: "Final interpretation",
-        caption: "The final table keeps the biological conclusion beside the representative genes and level of uncertainty that support it.",
       },
     ],
   },
@@ -807,12 +828,6 @@ const studySlides: StudySlide[] = [
         alt: "Complete PBMC workflow from data loading through computational analysis, literature integration, reasoning, and validation",
         label: "End-to-end provenance",
         caption: "Computational analysis, literature evidence, biological interpretation, and validation remain visibly separate stages.",
-      },
-      {
-        src: "/figures/cluster-cell-counts.png",
-        alt: "Counts of cells in each of the nine final PBMC3k populations",
-        label: "Sample-size context",
-        caption: "Every biological claim should be read alongside its sample size, especially the 11-cell platelet population.",
       },
     ],
   },
@@ -1243,6 +1258,364 @@ function InteractiveFigure({ figure }: { figure: Figure }) {
   );
 }
 
+function ModelComparisonFigure({ figure }: { figure: Figure }) {
+  const [activeModel, setActiveModel] = useState(0);
+  const selected = modelComparison[activeModel];
+  const barHeight = (value: number) => `${Math.max(0, Math.min(100, (value - .8) / .2 * 100))}%`;
+
+  return (
+    <figure className="model-comparison-figure">
+      <div className="model-comparison-layout">
+        <section className="model-zoom-chart" aria-label="Model scores from 0.80 to 1.00">
+          <div className="model-chart-heading">
+            <div>
+              <span>ZOOMED VIEW · 0.80–1.00</span>
+              <h2>Validation-selected model comparison with untouched-test estimates</h2>
+            </div>
+            <p><strong>{selected.model}</strong></p>
+          </div>
+          <div className="model-chart-body">
+            <div className="model-y-axis" aria-hidden="true">
+              {["1.00", "0.95", "0.90", "0.85", "0.80"].map((tick) => <span key={tick}>{tick}</span>)}
+            </div>
+            <div className="model-bars-area">
+              <div className="model-grid-lines" aria-hidden="true">{[0, 1, 2, 3, 4].map((line) => <i key={line} />)}</div>
+              <div className="model-groups">
+                {modelComparison.map((item, modelIndex) => (
+                  <button
+                    type="button"
+                    className={modelIndex === activeModel ? "model-group is-active" : "model-group"}
+                    key={item.model}
+                    onMouseEnter={() => setActiveModel(modelIndex)}
+                    onFocus={() => setActiveModel(modelIndex)}
+                    aria-label={`${item.model}: validation macro-F1 ${item.validationF1.toFixed(3)}, validation ROC AUC ${item.validationAuc.toFixed(3)}, test macro-F1 ${item.testF1.toFixed(3)}, test ROC AUC ${item.testAuc.toFixed(3)}`}
+                  >
+                    <span className="model-bars">
+                      {comparisonMetrics.map((metric) => (
+                        <i
+                          className={metric.className}
+                          key={metric.key}
+                          style={{ height: barHeight(item[metric.key]) }}
+                          title={`${metric.label}: ${item[metric.key].toFixed(3)}`}
+                        />
+                      ))}
+                    </span>
+                    <b>{item.short}</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="model-legend">
+            {comparisonMetrics.map((metric) => <span key={metric.key}><i className={metric.className} />{metric.label}</span>)}
+          </div>
+        </section>
+        <aside className="knn-threshold-card" aria-label="K-nearest neighbors was also tested and remained below the 0.80 display threshold">
+          <span>ALSO TESTED</span>
+          <h2>KNN</h2>
+          <small>Below 0.80</small>
+        </aside>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+const evidenceMetricVisuals = [
+  { src: "/figures/evidence-popouts/01-clusters.png", symbol: "9×", alt: "Nine glowing immune-cell communities connected in an evidence constellation" },
+  { src: "/figures/evidence-popouts/02-cluster-gene-matrix.png", symbol: "G×C", alt: "A luminous cluster-by-gene evidence matrix" },
+  { src: "/figures/evidence-popouts/03-unique-genes.png", symbol: "78", alt: "A visual library of distinct gene tokens" },
+  { src: "/figures/evidence-popouts/04-reference-rows.png", symbol: "231", alt: "Stacked verified research pages connected to biological evidence" },
+  { src: "/figures/evidence-popouts/05-verified-papers.png", symbol: "PMID", alt: "A network of verified scientific papers forming one evidence system" },
+  { src: "/figures/evidence-popouts/06-reused-genes.png", symbol: "↻", alt: "A reuse loop connecting genes across cell populations" },
+  { src: "/figures/evidence-popouts/07-validation-passes.png", symbol: "✓", alt: "Nine illuminated evidence-validation checkpoints" },
+  { src: "/figures/evidence-popouts/08-zero-failures.png", symbol: "0×", alt: "An uninterrupted pathway of successful validation checks" },
+  { src: "/figures/evidence-popouts/09-evidence-gap.png", symbol: "?", alt: "One explicit unresolved gap within an otherwise complete evidence network" },
+] as const;
+
+function EvidenceOverviewFigure({ figure }: { figure: Figure }) {
+  const [active, setActive] = useState(4);
+  const activeMetric = evidenceOverviewHotspots[active];
+  const activeVisual = evidenceMetricVisuals[active];
+  const supportingMetrics = evidenceOverviewHotspots
+    .map((metric, index) => ({ metric, index }))
+    .filter(({ index }) => index !== 4);
+
+  return (
+    <figure className="evidence-overview-figure">
+      <div className="evidence-overview-dashboard">
+        <section className="evidence-paper-hero" aria-label="224 unique verified PubMed papers">
+          <button className="paper-orbit" type="button" onMouseEnter={() => setActive(4)} onFocus={() => setActive(4)} onClick={() => setActive(4)} aria-label="224 unique verified papers">
+            <i /><i /><i />
+            <div><strong>224</strong></div>
+          </button>
+          <div className="evidence-hero-copy">
+            <span>PUBMED-BACKED EVIDENCE</span>
+            <h2>Verified papers</h2>
+            <p>These are 224 unique academic papers verified and reasoned by AI.</p>
+          </div>
+          <article className="evidence-selected-detail" key={activeMetric.id}>
+            <div className="evidence-detail-graphic">
+              <img src={withBasePath(activeVisual.src)} alt={activeVisual.alt} />
+              <i aria-hidden="true" />
+              <b aria-hidden="true">{activeVisual.symbol}</b>
+            </div>
+            <div className="evidence-detail-copy">
+              <strong>{activeMetric.title}</strong>
+              <p>{activeMetric.explanation}</p>
+            </div>
+          </article>
+        </section>
+        <div className="evidence-metric-cloud" aria-label="Interactive evidence totals">
+          {supportingMetrics.map(({ metric, index }) => {
+            const [value, ...labelParts] = metric.title.split(" ");
+            return (
+              <button
+                type="button"
+                className={`evidence-metric-card tone-${index % 4} ${active === index ? "is-active" : ""}`}
+                key={metric.id}
+                aria-pressed={active === index}
+                onMouseEnter={() => setActive(index)}
+                onFocus={() => setActive(index)}
+                onClick={() => setActive(index)}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{value}</strong>
+                <p>{labelParts.join(" ")}</p>
+                <i aria-hidden="true">↗</i>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+const pipelineStageMedia = [
+  "/figures/cells-ml-hero.png",
+  "/figures/classification-class-balance.png",
+  "/figures/qc-retained-cell-distributions.png",
+  "/figures/qc-detected-genes.png",
+  "/figures/eda-pca-umap.png",
+  "/figures/leiden-clusters.png",
+  "/figures/annotation-marker-dotplot.png",
+  "/figures/representative-marker-heatmap.png",
+  "/figures/classification-model-comparison.png",
+  "/figures/evidence-validation-overview.png",
+  "/figures/biological-reasoning-summary-no-pass.png",
+  "/figures/evidence-popouts/07-validation-passes.png",
+] as const;
+
+function PipelineExplorer({ figure }: { figure: Figure }) {
+  const [active, setActive] = useState(0);
+  const [title, explanation] = pipelineStages[active];
+  return (
+    <figure className="pipeline-explorer">
+      <div className="pipeline-explorer-body">
+        <div className="pipeline-stage-grid" role="tablist" aria-label="Analysis pipeline stages">
+          {pipelineStages.map(([stageTitle], index) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={active === index}
+              className={active === index ? "is-active" : ""}
+              onClick={() => setActive(index)}
+              key={stageTitle}
+            >
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <strong>{stageTitle}</strong>
+              <i aria-hidden="true" />
+            </button>
+          ))}
+        </div>
+        <article className="pipeline-stage-detail" key={title}>
+          <div className="pipeline-stage-image">
+            <img src={withBasePath(pipelineStageMedia[active])} alt={`Related visual for ${title}`} />
+            <span aria-hidden="true"><i /><i /><i /></span>
+          </div>
+          <div>
+            <h2>{title}</h2>
+            <p>{explanation}</p>
+          </div>
+        </article>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+function EvidenceClusterTable({ figure }: { figure: Figure }) {
+  return (
+    <figure className="evidence-cluster-figure">
+      <div className="evidence-cluster-table" role="table" aria-label="Evidence by cluster without a validation column">
+        <div className="evidence-table-row is-header" role="row">
+          {['Cluster', 'Final cell type', 'Top Phase 6 markers', 'Support', 'Confidence', 'Dominant program'].map((heading) => <strong role="columnheader" key={heading}>{heading}</strong>)}
+        </div>
+        {clusterEvidenceRows.map((row) => (
+          <div className="evidence-table-row" role="row" key={row[0]}>
+            {row.map((cell, index) => index === 0
+              ? <strong role="cell" key={cell}>{cell}</strong>
+              : <span role="cell" key={cell}>{cell}</span>)}
+          </div>
+        ))}
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+const reasoningSummaryRows = [
+  { cluster: "C0", cellType: "Cytotoxic CD8 T cells", support: "Strong", confidence: "Moderate", program: "Cytotoxic granule and effector-protease module", color: "#087fb5" },
+  { cluster: "C1", cellType: "B cells", support: "Strong", confidence: "High", program: "B-cell receptor-associated identity module", color: "#e89a00" },
+  { cluster: "C2", cellType: "IL7R+ memory/helper T cells", support: "Partial", confidence: "Moderate", program: "T-cell identity and signaling module", color: "#08a078" },
+  { cluster: "C3", cellType: "Classical monocytes", support: "Strong", confidence: "High", program: "Inflammatory classical-monocyte marker module", color: "#dc6200" },
+  { cluster: "C4", cellType: "CD16+ non-classical monocytes", support: "Partial", confidence: "Moderate", program: "CD16-associated monocyte identity module", color: "#cc70bd" },
+  { cluster: "C5", cellType: "NK cells", support: "Strong", confidence: "Moderate", program: "Cytotoxic granule effector module", color: "#d39a65" },
+  { cluster: "C6", cellType: "Activated/transitional T cells", support: "Partial", confidence: "Low", program: "T-cell-associated marker module", color: "#f39bd6" },
+  { cluster: "C7", cellType: "Naive/resting T cells", support: "Partial", confidence: "Moderate", program: "T-cell identity module", color: "#999999" },
+  { cluster: "C8", cellType: "Platelets", support: "Strong", confidence: "High", program: "Platelet identity and membrane-function module", color: "#f0dc16" },
+] as const;
+
+const supportPositions: Record<string, number> = { Weak: 4, Partial: 35, Moderate: 66, Strong: 96 };
+const confidencePositions: Record<string, number> = { Low: 5, Moderate: 50, High: 95 };
+
+function ReasoningSummaryFigure({ figure }: { figure: Figure }) {
+  return (
+    <figure className="reasoning-summary-figure">
+      <div className="reasoning-summary-live">
+        <header>
+          <h2>Phase 8 evidence-grounded biological reasoning summary</h2>
+        </header>
+        <div className="reasoning-column-headings" aria-hidden="true">
+          <strong />
+          <strong>Annotation support <small>Weak → Strong</small></strong>
+          <strong>Overall confidence <small>Low → High</small></strong>
+          <strong>Dominant biological program</strong>
+        </div>
+        <div className="reasoning-chart-rows" role="table" aria-label="Biological reasoning confidence by cluster">
+          {reasoningSummaryRows.map((row) => (
+            <div
+              className="reasoning-chart-row"
+              role="row"
+              tabIndex={0}
+              key={row.cluster}
+              aria-label={`${row.cluster}, ${row.cellType}: ${row.support} annotation support, ${row.confidence} confidence. ${row.program}.`}
+            >
+              <strong role="cell"><span>{row.cluster}</span>{row.cellType}</strong>
+              <div className="reasoning-dot-track support-track" role="cell" aria-label={`${row.support} annotation support`}>
+                <i style={{ left: `${supportPositions[row.support]}%`, background: row.color }} />
+              </div>
+              <div className="reasoning-dot-track confidence-track" role="cell" aria-label={`${row.confidence} confidence`}>
+                <i className={row.confidence.toLowerCase()} style={{ left: `${confidencePositions[row.confidence]}%` }} />
+              </div>
+              <p role="cell">{row.program}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+const clusterColors = ["#246B9E", "#3C91C4", "#55B5D0", "#249C9D", "#6577B8", "#8A6FB7", "#CB6F8E", "#D98555", "#D7AA3E"] as const;
+
+function CellCompositionFigure({ figure }: { figure: Figure }) {
+  const [active, setActive] = useState(2);
+  const selected = clusterComposition[active];
+  const maxCount = Math.max(...clusterComposition.map((row) => row[1]));
+
+  return (
+    <figure className="composition-figure-live">
+      <div className="composition-live-layout">
+        <section className="composition-bars" aria-label="Reviewed cell population sizes">
+          <header><span>9 REVIEWED POPULATIONS</span><h2>Every class stays visible</h2></header>
+          <div className="composition-bar-list">
+            {clusterComposition.map(([cellType, count, percentage], index) => (
+              <button
+                type="button"
+                className={active === index ? "is-active" : ""}
+                key={cellType}
+                onMouseEnter={() => setActive(index)}
+                onFocus={() => setActive(index)}
+                onClick={() => setActive(index)}
+                aria-label={`${cellType}: ${count} cells, ${percentage}`}
+              >
+                <strong><span>C{index}</span>{cellType}</strong>
+                <i><b style={{ width: `${Math.max(2.5, count / maxCount * 100)}%`, background: clusterColors[index] }} /></i>
+                <em>{count.toLocaleString()}</em>
+              </button>
+            ))}
+          </div>
+        </section>
+        <aside className="composition-popout" key={selected[0]}>
+          <span>{active === 8 ? "RARE POPULATION" : active === 2 ? "LARGEST POPULATION" : "POPULATION FOCUS"}</span>
+          <strong style={{ color: clusterColors[active] }}>{selected[2]}</strong>
+          <h2>{selected[0]}</h2>
+          <p>{selected[1].toLocaleString()} of 2,638 retained cells.</p>
+          <div aria-hidden="true"><i style={{ background: clusterColors[active] }} /><i /><i /></div>
+          <small>Hover or tap another row to compare.</small>
+        </aside>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
+function ConfusionMatrixFigure({ figure }: { figure: Figure }) {
+  const [active, setActive] = useState({ row: 0, column: 0 });
+  const value = confusionValues[active.row][active.column];
+  const correct = active.row === active.column;
+  const percent = Math.round(value * 100);
+
+  return (
+    <figure className="confusion-figure-live">
+      <div className="confusion-live-layout">
+        <section className="confusion-matrix-panel">
+          <header><span>TRUE LABEL ↓ · PREDICTED LABEL →</span><h2>Held-out test errors</h2></header>
+          <div className="confusion-grid-wrap">
+            <div className="confusion-x-labels" aria-hidden="true">
+              <i />{confusionLabels.map((label) => <span key={label}>{label}</span>)}
+            </div>
+            <div className="confusion-grid" role="grid" aria-label="Normalized XGBoost confusion matrix">
+              {confusionValues.map((row, rowIndex) => (
+                <div className="confusion-row" role="row" key={confusionLabels[rowIndex]}>
+                  <strong role="rowheader">{confusionLabels[rowIndex]}</strong>
+                  {row.map((cell, columnIndex) => (
+                    <button
+                      type="button"
+                      role="gridcell"
+                      className={active.row === rowIndex && active.column === columnIndex ? "is-active" : ""}
+                      key={`${rowIndex}-${columnIndex}`}
+                      style={{ background: `rgba(18, 118, 170, ${Math.max(.035, cell * .94)})` }}
+                      onMouseEnter={() => setActive({ row: rowIndex, column: columnIndex })}
+                      onFocus={() => setActive({ row: rowIndex, column: columnIndex })}
+                      onClick={() => setActive({ row: rowIndex, column: columnIndex })}
+                      aria-label={`${confusionLabels[rowIndex]} predicted as ${confusionLabels[columnIndex]}: ${Math.round(cell * 100)}%`}
+                    >
+                      {cell > 0 ? `${Math.round(cell * 100)}%` : ""}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+        <aside className={`confusion-popout ${correct ? "is-correct" : ""}`} key={`${active.row}-${active.column}`}>
+          <span>{correct ? "CORRECT CLASSIFICATION" : value > 0 ? "MISCLASSIFICATION" : "NO OBSERVED ERROR"}</span>
+          <strong>{percent}%</strong>
+          <h2>{confusionLabels[active.row]} <i>→</i> {confusionLabels[active.column]}</h2>
+          <p>{correct ? "This diagonal cell is the share correctly assigned to the same class." : value > 0 ? "This off-diagonal cell shows where related expression states were confused." : "No cells followed this error path in the held-out split."}</p>
+          <small>Hover or tap any square for its exact meaning.</small>
+        </aside>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
 function FigureViewer({ figures }: { figures: Figure[] }) {
   const [active, setActive] = useState(0);
   const figure = figures[active];
@@ -1256,13 +1629,31 @@ function FigureViewer({ figures }: { figures: Figure[] }) {
           </button>
         ))}
       </div>
-      <InteractiveFigure figure={figure} key={figure.src} />
+      {figure.src === "/figures/classification-model-comparison.png" ? (
+        <ModelComparisonFigure figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/evidence-validation-overview.png" ? (
+        <EvidenceOverviewFigure figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/complete-analysis-pipeline.png" ? (
+        <PipelineExplorer figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/final-cluster-summary.png" ? (
+        <EvidenceClusterTable figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/biological-reasoning-summary-no-pass.png" ? (
+        <ReasoningSummaryFigure figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/classification-class-balance.png" || figure.src === "/figures/cluster-percentages.png" ? (
+        <CellCompositionFigure figure={figure} key={figure.src} />
+      ) : figure.src === "/figures/classification-confusion-matrix.png" ? (
+        <ConfusionMatrixFigure figure={figure} key={figure.src} />
+      ) : (
+        <InteractiveFigure figure={figure} key={figure.src} />
+      )}
     </div>
   );
 }
 
-function MethodSlide({ slide }: { slide: StudySlide }) {
-  const summaryLines = slide.summary.split(/(?<=[.!?])\s+/);
+function MethodSlide({ slide, onlyPrimarySummary = false }: { slide: StudySlide; onlyPrimarySummary?: boolean }) {
+  const allSummaryLines = slide.summary.split(/(?<=[.!?])\s+/);
+  const summaryLines = onlyPrimarySummary ? allSummaryLines.slice(0, 1) : allSummaryLines;
+  const visibleSummary = summaryLines.join(" ");
   return (
     <div className="study-card">
       <header className="study-card-header">
@@ -1270,7 +1661,7 @@ function MethodSlide({ slide }: { slide: StudySlide }) {
       </header>
       <div className="study-card-body">
         <div className="slide-copy">
-          <div className="slide-summary" aria-label={slide.summary}>
+          <div className="slide-summary" aria-label={visibleSummary}>
             {summaryLines.map((line, index) => (
               <p key={line}>
                 <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
@@ -1873,13 +2264,13 @@ export default function SinglePagePresentation() {
           <DnaEntranceCanvas unwinding={entryState === "unwinding"} onComplete={() => setEntryState("entered")} />
           <div className="dna-entry-brand">
             <span>THE BACKPROPAGATORS</span>
-            <strong>PBMC3K</strong>
+            <strong>SINGLE-CELL RNA-SEQ</strong>
           </div>
           <p className="dna-entry-instruction"><span>Scroll down</span> to unwind the sequence <b>↓</b></p>
         </section>
       )}
       <header className="onepage-header">
-        <div className="onepage-brand"><Mark /><span>PBMC<span>3k</span></span></div>
+        <div className="onepage-brand"><Mark /><span>Single-Cell <span>RNA-seq</span></span></div>
         <div className="onepage-header-progress"><span>THE BACKPROPAGATORS</span><strong>{String(activeSlide + 1).padStart(2, "0")} / {String(presentationSlideCount).padStart(2, "0")}</strong></div>
         <button className="replay-tour" onClick={() => setTutorialOpen(true)}>How to view</button>
       </header>
@@ -1910,7 +2301,7 @@ export default function SinglePagePresentation() {
         <section className="story-slide cover-slide" id="home" data-slide={0} ref={(element) => { slideRefs.current[0] = element; }}>
           <div className="cover-card">
             <div className="cover-copy">
-              <span className="slide-eyebrow">THE BACKPROPAGATORS · PBMC3K</span>
+              <span className="slide-eyebrow">THE BACKPROPAGATORS · SINGLE-CELL RNA-SEQ</span>
               <h1>Can ML read the language of our cells?</h1>
               <p>
                 We turned thousands of RNA measurements from one donor's individual blood cells into a map of immune-cell identities,
@@ -1933,7 +2324,7 @@ export default function SinglePagePresentation() {
         </section>
         {studySlides.map((slide, index) => (
           <section className="story-slide" id={slide.id} data-slide={index + 1} ref={(element) => { slideRefs.current[index + 1] = element; }} key={slide.id}>
-            <MethodSlide slide={slide} />
+            <MethodSlide slide={slide} onlyPrimarySummary={index >= 6} />
           </section>
         ))}
         <section className="story-slide" id="test" data-slide={lastSlideIndex} ref={(element) => { slideRefs.current[lastSlideIndex] = element; }}>
