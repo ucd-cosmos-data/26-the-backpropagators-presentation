@@ -947,10 +947,14 @@
   .slide-visual figcaption { grid-template-columns: 1fr; gap: 5px; }
   .figure-hotspot { min-width: 44px; min-height: 44px; }
   .figure-hotspot.is-point { width: 44px; height: 44px; }
-  .figure-hotspot.is-point > span { inset: 16px; }
-  .figure-hotspot::after {
-    border-color: rgba(11,94,139,.58);
-    background: rgba(92,190,218,.12);
+  .figure-hotspot.is-point > span { opacity: 0; }
+  .figure-hotspot::after,
+  .figure-hotspot:hover::after,
+  .figure-hotspot:focus-visible::after,
+  .figure-hotspot.is-active::after {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
   }
   .figure-tools { top: 8px; right: 8px; }
   .figure-tools button { width: 40px; height: 40px; }
