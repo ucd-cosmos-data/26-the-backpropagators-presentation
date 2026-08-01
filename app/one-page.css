@@ -748,14 +748,15 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: clamp(18px, 2vw, 30px);
+  padding: clamp(16px, 1.7vw, 26px);
 }
 .significance-stage + .significance-stage { border-left: 1px solid var(--line); }
 .significance-stage h3 {
-  margin: 8px 0 8px;
-  font-size: clamp(19px, 1.8vw, 27px);
+  margin: 7px 0;
+  font-size: clamp(17px, 1.45vw, 23px);
   line-height: 1.02;
   letter-spacing: -.04em;
+  white-space: nowrap;
 }
 .significance-stage p {
   max-width: 230px;
@@ -767,8 +768,8 @@
 .significance-stage-visual {
   position: relative;
   width: 100%;
-  height: clamp(78px, 10vh, 112px);
-  margin-bottom: clamp(12px, 1.7vh, 20px);
+  height: clamp(62px, 8vh, 88px);
+  margin-bottom: clamp(8px, 1.2vh, 13px);
 }
 .significance-stage-visual i {
   position: absolute;
@@ -1528,7 +1529,7 @@
   .significance-stage + .significance-stage { border-left: 0; border-top: 1px solid var(--line); }
   .significance-stage-visual { grid-column: 1; grid-row: 1 / 4; height: 88px; margin: 0; }
   .significance-stage > span, .significance-stage h3, .significance-stage p { grid-column: 2; }
-  .significance-stage h3 { margin: 7px 0 8px; font-size: 22px; }
+  .significance-stage h3 { margin: 7px 0 8px; font-size: 22px; white-space: normal; }
   .significance-stage p { max-width: none; font-size: 12px; line-height: 1.45; }
   .significance-stage-visual i { width: 31px; }
   .significance-stage-visual b { right: 0; min-width: 34px; height: 34px; font-size: 13px; }

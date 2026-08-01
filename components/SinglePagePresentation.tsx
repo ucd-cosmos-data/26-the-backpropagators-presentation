@@ -1657,15 +1657,15 @@ function RnaSignificanceFigure({ figure }: { figure: Figure }) {
             </div>
             <span>BEFORE</span>
             <h3>Bulk RNA-seq</h3>
-            <p>One blended signal from many cells.</p>
+            <p>Many cells become one average.</p>
           </article>
           <article className="significance-stage stage-single">
             <div className="significance-stage-visual" aria-hidden="true">
               <i /><i /><i /><i /><b>1×</b>
             </div>
             <span>BREAKTHROUGH</span>
-            <h3>Single-cell RNA-seq</h3>
-            <p>Each cell keeps its own gene-activity profile.</p>
+            <h3>Single‑cell RNA‑seq</h3>
+            <p>One profile per cell.</p>
           </article>
           <article className="significance-stage stage-frontier">
             <div className="significance-stage-visual" aria-hidden="true">
@@ -1673,7 +1673,7 @@ function RnaSignificanceFigure({ figure }: { figure: Figure }) {
             </div>
             <span>NOW</span>
             <h3>Spatial + multimodal</h3>
-            <p>RNA gains location, proteins, and response.</p>
+            <p>Adds location, proteins + response.</p>
           </article>
         </div>
         <div className="significance-takeaway">
