@@ -540,7 +540,7 @@ const studySlides: StudySlide[] = [
     eyebrow: "WHY IT MATTERS",
     title: "Why single-cell RNA sequencing matters.",
     summary:
-      "Single-cell RNA-seq reveals every cell—not just the average.",
+      "Single-cell RNA-seq allows scientists to find where diseases develop in individual cells. This lets them be precise with treatment and save lives.",
     notes: [
       { label: "Resolution", value: "One profile per cell" },
       { label: "Advantage", value: "Rare states stay visible" },
@@ -1656,29 +1656,29 @@ function RnaSignificanceFigure({ figure }: { figure: Figure }) {
               <i /><i /><i /><i /><b>Σ</b>
             </div>
             <span>BEFORE</span>
-            <h3>Bulk RNA-seq</h3>
-            <p>Many cells become one average.</p>
+            <h3>PBMC cells</h3>
+            <p>Fight infections and structure the immune system.</p>
           </article>
           <article className="significance-stage stage-single">
             <div className="significance-stage-visual" aria-hidden="true">
               <i /><i /><i /><i /><b>1×</b>
             </div>
             <span>BREAKTHROUGH</span>
-            <h3>Single‑cell RNA‑seq</h3>
-            <p>One profile per cell.</p>
+            <h3>New tech</h3>
+            <p>Instead of sampling bulk cells, now we can track on an individual level.</p>
           </article>
           <article className="significance-stage stage-frontier">
             <div className="significance-stage-visual" aria-hidden="true">
               <i /><i /><i /><i /><b>+</b>
             </div>
-            <span>NOW</span>
+            <span>IMPACT</span>
             <h3>Spatial + multimodal</h3>
-            <p>Adds location, proteins + response.</p>
+            <p>New treatments and research can be done on a much more detailed and accurate level.</p>
           </article>
         </div>
         <div className="significance-takeaway">
           <span>WHY IT MATTERS</span>
-          <strong>Rare cells and changing states no longer disappear into the average.</strong>
+          <strong>Scientists can see exactly which cells drive certain diseases and treat them.</strong>
         </div>
       </div>
       <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
