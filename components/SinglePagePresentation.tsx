@@ -2208,6 +2208,7 @@ export default function SinglePagePresentation() {
   const goToSlide = (index: number) => {
     const root = scroller.current;
     if (!root || index < 0 || index > lastSlideIndex) return;
+    slideRefs.current[index]?.scrollTo({ top: 0, behavior: "auto" });
     setActiveSlide(index);
     root.scrollTo({ left: index * root.clientWidth, behavior: "smooth" });
   };
