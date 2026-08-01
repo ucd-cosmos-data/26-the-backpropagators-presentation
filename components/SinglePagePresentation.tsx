@@ -540,7 +540,7 @@ const studySlides: StudySlide[] = [
     eyebrow: "WHY IT MATTERS",
     title: "Why single-cell RNA sequencing matters.",
     summary:
-      "Bulk RNA sequencing blends many cells into one average. Single-cell RNA sequencing keeps each cell's signal separate, exposing rare populations and changing states. Today's frontier adds spatial position, proteins, and experimental response.",
+      "Single-cell RNA-seq reveals every cell—not just the average.",
     notes: [
       { label: "Resolution", value: "One profile per cell" },
       { label: "Advantage", value: "Rare states stay visible" },
