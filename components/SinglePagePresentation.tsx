@@ -535,8 +535,34 @@ const studySlides: StudySlide[] = [
     ],
   },
   {
-    id: "preprocessing",
+    id: "significance",
     number: "02",
+    eyebrow: "WHY IT MATTERS",
+    title: "Why single-cell RNA sequencing matters.",
+    summary:
+      "Bulk RNA sequencing blends many cells into one average. Single-cell RNA sequencing keeps each cell's signal separate, exposing rare populations and changing states. Today's frontier adds spatial position, proteins, and experimental response.",
+    notes: [
+      { label: "Resolution", value: "One profile per cell" },
+      { label: "Advantage", value: "Rare states stay visible" },
+      { label: "Frontier", value: "Spatial + multimodal" },
+    ],
+    points: [
+      { term: "2009", explanation: "Whole-transcriptome RNA sequencing was demonstrated in a single cell." },
+      { term: "2010s", explanation: "Droplet barcoding scaled the method to tens of thousands of cells per sample." },
+      { term: "Now", explanation: "Spatial and multimodal methods connect RNA with tissue location, proteins, and perturbation response." },
+    ],
+    figures: [
+      {
+        src: "interactive:rna-significance",
+        alt: "Research progression from bulk RNA sequencing to single-cell and spatial multimodal profiling",
+        label: "Research progression",
+        caption: "The field moved from one blended average to cell-by-cell profiles, then added biological context around each cell.",
+      },
+    ],
+  },
+  {
+    id: "preprocessing",
+    number: "03",
     eyebrow: "PREPROCESSING",
     title: "Processing messy data.",
     summary:
@@ -568,7 +594,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "eda",
-    number: "03",
+    number: "04",
     eyebrow: "EXPLORATORY ANALYSIS",
     title: "Find groups within thousands of cells.",
     summary:
@@ -600,7 +626,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "clustering",
-    number: "04",
+    number: "05",
     eyebrow: "CLUSTERING",
     title: "Finding patterns in the data.",
     summary:
@@ -638,7 +664,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "annotation",
-    number: "05",
+    number: "06",
     eyebrow: "CELL-TYPE ANNOTATION",
     title: "Uncovering cell types.",
     summary:
@@ -671,7 +697,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "model",
-    number: "06",
+    number: "07",
     eyebrow: "MODEL EVALUATION",
     title: "May the best model win.",
     summary:
@@ -711,7 +737,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "biological-interpretation",
-    number: "07",
+    number: "08",
     eyebrow: "BIOLOGICAL INTERPRETATION",
     title: "Using genes to decide cell function",
     summary:
@@ -749,7 +775,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "literature",
-    number: "08",
+    number: "09",
     eyebrow: "LITERATURE VALIDATION",
     title: "Check every grouping against verified scientific evidence.",
     summary:
@@ -781,7 +807,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "reasoning",
-    number: "09",
+    number: "10",
     eyebrow: "EVIDENCE-GROUNDED REASONING",
     title: "Turn evidence into cautious, testable biological conclusions.",
     summary:
@@ -807,7 +833,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "pipeline",
-    number: "10",
+    number: "11",
     eyebrow: "FULL EVIDENCE PIPELINE",
     title: "How did we get here?",
     summary:
@@ -833,7 +859,7 @@ const studySlides: StudySlide[] = [
   },
   {
     id: "second-donor",
-    number: "11",
+    number: "12",
     eyebrow: "SECOND DONOR",
     title: "Does this model work on someone else?",
     summary:
@@ -1616,6 +1642,50 @@ function ConfusionMatrixFigure({ figure }: { figure: Figure }) {
   );
 }
 
+function RnaSignificanceFigure({ figure }: { figure: Figure }) {
+  return (
+    <figure className="significance-figure">
+      <div className="significance-progression">
+        <header>
+          <span>FROM AVERAGES TO CONTEXT</span>
+          <h2>One cell changed the question</h2>
+        </header>
+        <div className="significance-stages">
+          <article className="significance-stage stage-bulk">
+            <div className="significance-stage-visual" aria-hidden="true">
+              <i /><i /><i /><i /><b>Σ</b>
+            </div>
+            <span>BEFORE</span>
+            <h3>Bulk RNA-seq</h3>
+            <p>One blended signal from many cells.</p>
+          </article>
+          <article className="significance-stage stage-single">
+            <div className="significance-stage-visual" aria-hidden="true">
+              <i /><i /><i /><i /><b>1×</b>
+            </div>
+            <span>BREAKTHROUGH</span>
+            <h3>Single-cell RNA-seq</h3>
+            <p>Each cell keeps its own gene-activity profile.</p>
+          </article>
+          <article className="significance-stage stage-frontier">
+            <div className="significance-stage-visual" aria-hidden="true">
+              <i /><i /><i /><i /><b>+</b>
+            </div>
+            <span>NOW</span>
+            <h3>Spatial + multimodal</h3>
+            <p>RNA gains location, proteins, and response.</p>
+          </article>
+        </div>
+        <div className="significance-takeaway">
+          <span>WHY IT MATTERS</span>
+          <strong>Rare cells and changing states no longer disappear into the average.</strong>
+        </div>
+      </div>
+      <figcaption><strong>{figure.label}</strong><span>{figure.caption}</span></figcaption>
+    </figure>
+  );
+}
+
 function FigureViewer({ figures }: { figures: Figure[] }) {
   const [active, setActive] = useState(0);
   const figure = figures[active];
@@ -1631,6 +1701,8 @@ function FigureViewer({ figures }: { figures: Figure[] }) {
       </div>
       {figure.src === "/figures/classification-model-comparison.png" ? (
         <ModelComparisonFigure figure={figure} key={figure.src} />
+      ) : figure.src === "interactive:rna-significance" ? (
+        <RnaSignificanceFigure figure={figure} key={figure.src} />
       ) : figure.src === "/figures/evidence-validation-overview.png" ? (
         <EvidenceOverviewFigure figure={figure} key={figure.src} />
       ) : figure.src === "/figures/complete-analysis-pipeline.png" ? (
@@ -2325,7 +2397,7 @@ export default function SinglePagePresentation() {
         </section>
         {studySlides.map((slide, index) => (
           <section className="story-slide" id={slide.id} data-slide={index + 1} ref={(element) => { slideRefs.current[index + 1] = element; }} key={slide.id}>
-            <MethodSlide slide={slide} onlyPrimarySummary={index >= 6} />
+            <MethodSlide slide={slide} onlyPrimarySummary={index >= 7} />
           </section>
         ))}
         <section className="story-slide" id="test" data-slide={lastSlideIndex} ref={(element) => { slideRefs.current[lastSlideIndex] = element; }}>
